@@ -1066,6 +1066,7 @@ ONNX_MS_OPERATOR_SET_SCHEMA(BeamSearch, 1,
                                         "Beam scores consisting of log softmax scores for each vocabulary token and sum of log softmax of previously generated tokens in this beam."
                                         "Shape is (max_length - sequence_length, batch_size, num_beams, vocab_size)",
                                         "T", OpSchema::Optional)
+                                .Output(3, "brian_hidden_states", "Hidden states of the encoder", "T")
                                 .TypeConstraint("T", {"tensor(float)"}, "Constrain input and output types to float tensors.")
                                 .TypeConstraint("I", {"tensor(int32)"}, "Constrain to integer types")
                                 .TypeConstraint("M", {"tensor(int32)"}, "Constrain mask to integer types")
