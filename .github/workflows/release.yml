@@ -33,6 +33,7 @@ jobs:
                echo "$RUNNER_OS not supported"
                exit 1
           fi
+        working-directory: ${{ github.workspace }}
 #      - name: Download build artifacts
 #        uses: actions/download-artifact@v3
 #        with:
