@@ -27,11 +27,11 @@ jobs:
       - name: cmake build
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
-            ./build.sh --config RelWithDebInfo --build_shared_lib --parallel --enable_pybind --skip_tests --build_wheel --cmake_extra_defines
+            ./build.sh --config RelWithDebInfo --build_shared_lib --parallel
           elif [ "$RUNNER_OS" == "Windows" ]; then
-            .\build.bat --config RelWithDebInfo --build_shared_lib --parallel --enable_pybind --skip_tests --build_wheel --cmake_extra_defines
+            .\build.bat --config RelWithDebInfo --build_shared_lib --parallel
           elif [ "$RUNNER_OS" == "macOS" ]; then
-            ./build.sh --config RelWithDebInfo --build_shared_lib --parallel --enable_pybind --skip_tests --build_wheel --cmake_extra_defines CMAKE_OSX_ARCHITECTURES=x86_64
+            ./build.sh --config RelWithDebInfo --build_shared_lib --parallel CMAKE_OSX_ARCHITECTURES=x86_64
           else
                echo "$RUNNER_OS not supported"
                exit 1
