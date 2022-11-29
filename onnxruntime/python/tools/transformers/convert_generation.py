@@ -1609,10 +1609,6 @@ def test_t5_model(args: argparse.Namespace, sentences: Optional[List[str]] = Non
             args.model_name_or_path,
             cache_dir=args.cache_dir,
         )
-        encoder_model = T5EncoderModel.from_pretrained(
-            args.model_name_or_path,
-            cache_dir=args.cache_dir,
-        )
     else:
         model = MT5ForConditionalGeneration.from_pretrained(
             args.model_name_or_path,
@@ -1648,14 +1644,6 @@ def test_t5_model(args: argparse.Namespace, sentences: Optional[List[str]] = Non
     inputs = tokenizer(sentences, return_tensors="pt")
     input_ids = inputs["input_ids"]
     attention_mask = inputs["attention_mask"]
-
-    print("-" * 50)
-    print("Testing T5EncoderModel:")
-    outputs = encoder_model(input_ids=input_ids)
-    last_hidden_states = outputs.last_hidden_state
-    print(last_hidden_states.size())
-    print("encoder_hidden_states: ", last_hidden_states)
-
 
     # bad_words = "walk in park"
     # bad_words_ids = tokenizer.encode(bad_words)[:-1]  # exclude the last token (EOS)
