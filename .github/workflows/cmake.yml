@@ -1,0 +1,82 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+name: Dart Multi-OS Test
+
+on:
+  workflow_call:
+    inputs:
+      build_type:
+        type: string
+        required: false
+        default: Release
+      build_dir:
+        type: string
+        required: false
+        default: cmake-build
+      target:
+        type: string
+        required: false
+        default: all
+      run_tests:
+        type: boolean
+        required: false
+        default: true
+
+jobs:
+  cmake_build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        #os: [ ubuntu-latest, windows-latest, macos-latest ]
+        os: [ windows-latest ]
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Check input variables
+        run: |
+          echo "build_type: ${{ inputs.build_type }}"
+          echo "target: ${{ inputs.target }}"
+          echo "run_tests: ${{ inputs.run_tests }}"
+
+      - name: Setup cmake
+        uses: jwlawson/actions-setup-cmake@v1.12
+        with:
+          cmake-version: '3.23.x'
+
+      - name: Pull & update submodules recursively
+        run: |
+          git submodule update --init --recursive
+          git submodule update --recursive --remote
+
+      - name: Build cpuinfo library to use as a dependency
+        run: scripts/local-build.sh
+        shell: bash
+        working-directory: ${{ github.workspace }}/third_party/cpuinfo/
+
+      - name: debug win
+        run: |
+          cd build
+          ls
+        working-directory: ${{ github.workspace }}/third_party/cpuinfo/
+        shell: bash
+
+      - name: Configure CMake project
+        run: cmake -S . -B ${{ inputs.build_dir }} -DCMAKE_BUILD_TYPE=${{ inputs.build_type }}
+      - name: Build CMake project
+        run: cmake --build ${{ inputs.build_dir }} -j --config ${{ inputs.build_type }} --target ${{ inputs.target }}
+
+      - name: Run tests
+        if: ${{ inputs.run_tests == true }}
+        working-directory: ${{ inputs.build_dir }}/test
+        run: ctest
+
+      - name: Archive build artifacts - only if they are release
+        if: ${{ inputs.build_type == 'Release' }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-${{ runner.os }}
+          path: bin/
+          if-no-files-found: error
