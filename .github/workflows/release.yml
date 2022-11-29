@@ -21,11 +21,12 @@ jobs:
         os: [ ubuntu-latest, macos-latest, windows-latest ]
 
     steps:
+      - name: Check out a copy of the repository
+        uses: actions/checkout@v2
+
       - name: cmake build
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
-            echo ${{ github.workspace }}
-            ls -a
             ./build.sh --config RelWithDebInfo --build_shared_lib --parallel --enable_pybind --skip_tests --build_wheel --cmake_extra_defines
           elif [ "$RUNNER_OS" == "Windows" ]; then
             .\build.bat --config RelWithDebInfo --build_shared_lib --parallel --enable_pybind --skip_tests --build_wheel --cmake_extra_defines
