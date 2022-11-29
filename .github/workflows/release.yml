@@ -31,7 +31,7 @@ jobs:
           elif [ "$RUNNER_OS" == "Windows" ]; then
             .\build.bat --config RelWithDebInfo --build_shared_lib --parallel
           elif [ "$RUNNER_OS" == "macOS" ]; then
-            ./build.sh --config RelWithDebInfo --build_shared_lib --parallel CMAKE_OSX_ARCHITECTURES=x86_64
+            ./build.sh --config RelWithDebInfo --build_shared_lib --parallel --cmake_extra_defines CMAKE_OSX_ARCHITECTURES=x86_64
           else
                echo "$RUNNER_OS not supported"
                exit 1
