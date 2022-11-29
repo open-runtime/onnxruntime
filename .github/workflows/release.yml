@@ -37,6 +37,7 @@ jobs:
                exit 1
           fi
         working-directory: ${{ github.workspace }}
+        shell: bash
 #      - name: Download build artifacts
 #        uses: actions/download-artifact@v3
 #        with:
