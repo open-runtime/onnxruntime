@@ -31,7 +31,7 @@ jobs:
 #      - name: build
 #        run: ./build.sh --config RelWithDebInfo --build_shared_lib --parallel
   windows_release:
-    runs-on: windows-latest
+    runs-on: windows-2019
     steps:
       - name: Check out a copy of the repository
         uses: actions/checkout@v2
