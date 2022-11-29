@@ -401,6 +401,7 @@ void BeamSearchShapeInference(ONNX_NAMESPACE::InferenceContext& ctx) {
   // output 0 (sequences) shape: (batch_size, num_return_sequences, max_length)
   // output 1 (sequences_scores) shape: (batch_size, num_return_sequences)
   // output 2 (scores) shape: (max_length - sequence_length, batch_size, num_beams, vocab_size)
+  // output 3 (encoder_hidden_states) shape: (batch_size, encode_sequence_length, encoder_hidden_size)
   if (!hasInputShape(ctx, 0)) {
     return;
   }
@@ -1066,7 +1067,7 @@ ONNX_MS_OPERATOR_SET_SCHEMA(BeamSearch, 1,
                                         "Beam scores consisting of log softmax scores for each vocabulary token and sum of log softmax of previously generated tokens in this beam."
                                         "Shape is (max_length - sequence_length, batch_size, num_beams, vocab_size)",
                                         "T", OpSchema::Optional)
-                                .Output(3, "brian_hidden_states", "Hidden states of the encoder", "T")
+                                .Output(3, "encoder_hidden_states", "Hidden states of the encoder. Shape is (batch_size, encode_sequence_length, encoder_hidden_size", "T", OpSchema::Optional)
                                 .TypeConstraint("T", {"tensor(float)"}, "Constrain input and output types to float tensors.")
                                 .TypeConstraint("I", {"tensor(int32)"}, "Constrain to integer types")
                                 .TypeConstraint("M", {"tensor(int32)"}, "Constrain mask to integer types")

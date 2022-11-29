@@ -226,6 +226,14 @@ def parse_arguments(argv: Optional[List[str]] = None) -> argparse.Namespace:
     )
     model_group.set_defaults(output_token_scores=True)
 
+    model_group.add_argument(
+        "--output_encoder_hidden_states",
+        required=False,
+        action="store_true",
+        help="output encoder hidden states",
+    )
+    model_group.set_defaults(output_encoder_hidden_states=True)
+
 
     model_group.add_argument("--early_stopping", required=False, action="store_true")
     model_group.set_defaults(early_stopping=False)
@@ -913,6 +921,10 @@ def convert_generation_model(args: argparse.Namespace, generation_type: Generati
     is_gpt2: bool = args.model_type == "gpt2"
     is_greedysearch: bool = generation_type == GenerationType.GREEDYSEARCH
 
+    # TODO: fix issue with outputting encoder hidden states without needing the sequence scores
+    if args.output_encoder_hidden_states:
+        if not args.output_sequences_scores:
+            raise NotImplementedError("Encoder hidden states can only be output if sequences scores are output also")
 
     if is_greedysearch:
         if not is_gpt2:
@@ -926,6 +938,8 @@ def convert_generation_model(args: argparse.Namespace, generation_type: Generati
     if is_gpt2:
         if args.decoder_onnx and os.path.exists(args.decoder_onnx):
             logger.info(f"skip convert_to_onnx since path existed: {args.decoder_onnx}")
+        if args.output_encoder_hidden_states:
+            raise NotImplementedError("output_encoder_hidden_states currently is not supported for gpt2")
         else:
             if not args.decoder_onnx:
                 onnx_filename = "gpt2_past_{}.onnx".format("fp16" if args.precision == Precision.FLOAT16 else "fp32")
@@ -952,7 +966,7 @@ def convert_generation_model(args: argparse.Namespace, generation_type: Generati
     if is_gpt2:
         config = GPT2Config.from_pretrained(args.model_name_or_path, cache_dir=args.cache_dir)
     elif args.model_type == "t5":
-        config = T5Config.from_pretrained(args.model_name_or_path, cache_dir=args.cache_dir, output_hidden_states=True)
+        config = T5Config.from_pretrained(args.model_name_or_path, cache_dir=args.cache_dir)
     else:
         config = MT5Config.from_pretrained(args.model_name_or_path, cache_dir=args.cache_dir)
 
@@ -1019,17 +1033,16 @@ def convert_generation_model(args: argparse.Namespace, generation_type: Generati
         inputs.append("")
 
     outputs = ["sequences"]
-    # outputs = ["sequences", "encoder_hidden_states"]
 
     if args.output_sequences_scores:
         outputs.append("sequences_scores")
-
 
     if args.output_token_scores:
         assert args.output_sequences_scores, "--output_token_scores requires --output_sequences_scores"
         outputs.append("scores")
 
-    outputs.append("brian_hidden_states")
+    if args.output_encoder_hidden_states:
+        outputs.append("encoder_hidden_states")
 
     node = (
         onnx.helper.make_node(
@@ -1192,28 +1205,25 @@ def convert_generation_model(args: argparse.Namespace, generation_type: Generati
         ["max_length - sequence_length", "batch_size", "num_beams", vocab_size],
     )
 
-    encoder_hidden_size = 512
+    encoder_hidden_size = config.d_model
     encoder_hidden_states = (
         onnx.helper.make_tensor_value_info(
-            "brian_hidden_states",
+            "encoder_hidden_states",
             TensorProto.FLOAT,
             ["batch_size", "encode_sequence_length", encoder_hidden_size]
         )
     )
-
-    # encoder_hidden_states = onnx.helper.ValueInfoProto()
-    # encoder_hidden_states.name = "encoder_hidden_states"
 
     graph_outputs = [sequences]
 
     if args.output_sequences_scores:
         graph_outputs.append(sequences_scores)
 
-
     if args.output_token_scores:
         graph_outputs.append(scores)
 
-    graph_outputs.append(encoder_hidden_states)
+    if args.output_encoder_hidden_states:
+        graph_outputs.append(encoder_hidden_states)
 
     new_graph = onnx.helper.make_graph(
         [node],
@@ -1513,7 +1523,8 @@ def test_gpt_model(args: argparse.Namespace, sentences: Optional[List[str]] = No
         print("sequences_scores", result[1])
     if args.output_token_scores:
         print("scores", result[2])
-    print("here")
+    if args.output_encoder_hidden_states:
+        print("encoder_hidden_states:", result[3])
 
     if is_greedy:
         (batch_size, max_length) = sequences.shape
@@ -1597,7 +1608,6 @@ def test_t5_model(args: argparse.Namespace, sentences: Optional[List[str]] = Non
         model = T5ForConditionalGeneration.from_pretrained(
             args.model_name_or_path,
             cache_dir=args.cache_dir,
-            output_hidden_states=True,
         )
         encoder_model = T5EncoderModel.from_pretrained(
             args.model_name_or_path,
@@ -1639,11 +1649,12 @@ def test_t5_model(args: argparse.Namespace, sentences: Optional[List[str]] = Non
     input_ids = inputs["input_ids"]
     attention_mask = inputs["attention_mask"]
 
-    print("\nEncoder outputs:")
+    print("-" * 50)
+    print("Testing T5EncoderModel:")
     outputs = encoder_model(input_ids=input_ids)
     last_hidden_states = outputs.last_hidden_state
     print(last_hidden_states.size())
-    print(last_hidden_states)
+    print("encoder_hidden_states: ", last_hidden_states)
 
 
     # bad_words = "walk in park"
@@ -1693,7 +1704,6 @@ def test_t5_model(args: argparse.Namespace, sentences: Optional[List[str]] = Non
             output_scores=args.output_sequences_scores or args.output_token_scores,
         )
 
-
         print("input_ids", input_ids)
         print("huggingface transformers outputs:")
         print("sequences", beam_outputs.sequences)
@@ -1706,22 +1716,21 @@ def test_t5_model(args: argparse.Namespace, sentences: Optional[List[str]] = Non
             torch_decoded_sequences.append(decoded_sequence)
             print("{}: {}".format(i, decoded_sequence))
 
-        print(activation['encoder.dropout'].size())
-        print(activation['encoder.dropout'])
+        if args.output_encoder_hidden_states:
+            print("encoder_hidden_states:")
+            print(activation['encoder.dropout'].size())
+            print(activation['encoder.dropout'])
 
 
     print("-" * 50)
     print("Testing beam search with onnxruntime...")
 
-
     ort_session = create_ort_session(args.output, args.use_gpu)
-
 
     vocab_mask = np.ones((vocab_size), dtype=np.int32)
     # if args.vocab_mask:
     #     for bad_word_id in bad_words_ids:
     #         vocab_mask[bad_word_id] = 0
-
 
     inputs = {
         "input_ids": input_ids.cpu().numpy().astype(np.int32),
@@ -1769,16 +1778,16 @@ def test_t5_model(args: argparse.Namespace, sentences: Optional[List[str]] = Non
 
     output = get_latency_result(latency, batch_size)
 
-    print("ORT outputzz:")
-    print(args)
-    print("repetition pen: ", args.repetition_penalty)
+    print("ORT outputs:")
+    print("Output size:", len(result))
     sequences = result[0]
     print("sequences", sequences)
     if args.output_sequences_scores:
         print("sequences_scores", result[1])
     if args.output_token_scores:
         print("scores", result[2])
-    print("encoder_hidden_states", result[3])
+    if args.output_encoder_hidden_states:
+        print("encoder_hidden_states", result[3])
 
 
     (batch_size, num_sequences, max_length) = sequences.shape
@@ -1820,8 +1829,6 @@ def test_t5_model(args: argparse.Namespace, sentences: Optional[List[str]] = Non
         )
         print("Torch Latency", torch_latency_output)
 
-
-    print("ORT", output)
     return output
 
 

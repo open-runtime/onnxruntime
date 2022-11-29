@@ -98,8 +98,6 @@ Status BeamSearchT5<T>::Execute(const FeedsFetchesManager& encoder_feeds_fetches
   TensorShape scores_shape(&scores_dims[0], sizeof(scores_dims) / sizeof(scores_dims[0]));
   Tensor* output_scores = this->context_.Output(2, scores_shape);
 
-
-
   // Update the flag to indicate whether scores exists in output
   this->parameters_->output_scores = (output_scores != nullptr);
 
@@ -144,21 +142,18 @@ Status BeamSearchT5<T>::Execute(const FeedsFetchesManager& encoder_feeds_fetches
                                              this->context_.GetTerminateFlag(),
                                              this->context_.Logger()));
 
-//    // Output per token scores
-//    if (output_scores != nullptr) {
-//        gsl::span<float> target = output_scores->MutableDataAsSpan<float>();
-//        gsl::span<const float> source = gsl::span<const float>(beam_state.scores.data(), beam_state.scores.size());
-//        assert(target.size() == source.size());
-//        ORT_RETURN_IF_ERROR(this->device_copy_func_(target, source, nullptr, DeviceCopyDirection::deviceToDevice));
-//    }
-
-  // encoder_hidden_states
-  // Test add new output
-  std::cout << "encoder_hidden_state_shape: " << encoder_fetches[0].Get<Tensor>().Shape() << std::endl;
-  Tensor* src = this->context_.Output(3, encoder_fetches[1].Get<Tensor>().Shape());
-  gsl::span<float> src_data = src->MutableDataAsSpan<float>();
-  gsl::span<const float> tgt = encoder_fetches[1].Get<Tensor>().DataAsSpan<float>();
-  ORT_RETURN_IF_ERROR(this->device_copy_func_(src_data, tgt, nullptr, DeviceCopyDirection::deviceToDevice));
+  // Allocate output tensor for encoder_hidden_states
+  const Tensor& encoder_hidden_states = encoder_fetches[1].Get<Tensor>();
+  Tensor* encoder_hidden_states_src = this->context_.Output(3, encoder_hidden_states.Shape());
+  // Check whether encoder_hidden_states exists in the output
+  if (encoder_hidden_states_src != nullptr) {
+      std::cout << "Hidden states not null" << std::endl;
+      gsl::span<float> encoder_hidden_states_src_data = encoder_hidden_states_src->MutableDataAsSpan<float>();
+      gsl::span<const float> encoder_hidden_states_target = encoder_hidden_states.DataAsSpan<float>();
+      assert(encoder_hidden_states_target.size() == encoder_hidden_states_src_data.size());
+      ORT_RETURN_IF_ERROR(this->device_copy_func_(encoder_hidden_states_src_data, encoder_hidden_states_target, nullptr,
+                                                  DeviceCopyDirection::deviceToDevice));
+  }
 
 #ifdef DEBUG_GENERATION
   const IConsoleDumper* dumper = this->GetConsoleDumper();
@@ -278,6 +273,8 @@ Status BeamSearchT5<T>::Execute(const FeedsFetchesManager& encoder_feeds_fetches
     }
 #endif
 
+    // TODO: output decoder hidden states from decoder_fetches
+
     const OrtValue& logits = decoder_fetches[0];
     ORT_RETURN_IF_ERROR(this->GenerateNextToken(logits,
                                                 beam_next_tokens,
@@ -333,6 +330,7 @@ Status BeamSearchT5<T>::Execute(const FeedsFetchesManager& encoder_feeds_fetches
 
   // Output per token scores
   if (output_scores != nullptr) {
+    std::cout << "Output scores not null" << std::endl;
     gsl::span<float> target = output_scores->MutableDataAsSpan<float>();
     gsl::span<const float> source = gsl::span<const float>(beam_state.scores.data(), beam_state.scores.size());
     assert(target.size() == source.size());
