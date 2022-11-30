@@ -14,6 +14,7 @@ on:
       - 'v[0-9]+.[0-9]+.[0-9]+'
 
 jobs:
+# TODO: use universal
 #  mac_release:
 #    runs-on: macos-latest
 #    steps:
@@ -33,33 +34,78 @@ jobs:
 #        with:
 #          files: onnxruntime-osx-x86_64-1.14.0.tgz
 
-  linux_release:
-    runs-on: ubuntu-latest
+#  linux_release:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Check out a copy of the repository
+#        uses: actions/checkout@v2
+#
+#      - name: build
+#        run: ./build.sh --config Release --build_shared_lib --parallel --skip_tests
+#
+#      - name: Copy, strip, and zip binary
+#        run: |
+#          ./tools/ci_build/github/linux/copy_strip_binary.sh -r build/Linux -a onnxruntime-linux-x64-1.14.0 -l libonnxruntime.so -c Release -s ./
+#          tar -cvzf onnxruntime-linux-x64-1.14.0.tgz build/Linux/onnxruntime-linux-x64-1.14.0
+#
+#      - name: Release
+#        uses: softprops/action-gh-release@v1
+#        with:
+#          files: onnxruntime-linux-x64-1.14.0.tgz
+
+  windows_release:
+    runs-on: windows-2019
+    env:
+      BinariesDirectory: build\Windows
+      buildConfig: Release
+      $artifactName: onnxruntime-win-x64-1.14.0
     steps:
       - name: Check out a copy of the repository
         uses: actions/checkout@v2
 
+#      - uses: seanmiddleditch/gha-setup-vsdevenv@master
+
       - name: build
-        run: ./build.sh --config Release --build_shared_lib --parallel --skip_tests
+        run: .\build.bat --config Release --build_shared_lib --parallel --skip_tests
 
       - name: Copy, strip, and zip binary
         run: |
-          ./tools/ci_build/github/linux/copy_strip_binary.sh -r build/Linux -a onnxruntime-linux-x64-1.14.0 -l libonnxruntime.so -c Release -s ./
-          tar -cvzf onnxruntime-linux-x64-1.14.0.tgz build/Linux/onnxruntime-linux-x64-1.14.0
+          mkdir $BinariesDirectory\$artifactName
+          mkdir $BinariesDirectory\$artifactName\lib
+          mkdir $BinariesDirectory\$artifactName\include
+
+          echo "Directories created"            
+          copy $BinariesDirectory\buildConfig\buildConfig\onnxruntime.dll $BinariesDirectory\$artifactName\lib
+          copy $BinariesDirectory\buildConfig\buildConfig\onnxruntime_providers_shared.dll $BinariesDirectory\$artifactName\lib
+          copy $BinariesDirectory\buildConfig\buildConfig\onnxruntime_providers_shared.lib $BinariesDirectory\$artifactName\lib
+          copy $BinariesDirectory\buildConfig\buildConfig\onnxruntime_providers_shared.pdb $BinariesDirectory\$artifactName\lib
+          copy $BinariesDirectory\buildConfig\buildConfig\onnxruntime_providers_cuda.dll $BinariesDirectory\$artifactName\lib
+          copy $BinariesDirectory\buildConfig\buildConfig\onnxruntime_providers_cuda.pdb $BinariesDirectory\$artifactName\lib
+          copy $BinariesDirectory\buildConfig\buildConfig\onnxruntime_providers_cuda.lib $BinariesDirectory\$artifactName\lib
+
+          # copy trt ep libraries only when trt ep is enabled
+          copy $BinariesDirectory\buildConfig\buildConfig\onnxruntime_providers_tensorrt.dll $BinariesDirectory\$artifactName\lib
+          copy $BinariesDirectory\buildConfig\buildConfig\onnxruntime_providers_tensorrt.pdb $BinariesDirectory\$artifactName\lib
+          copy $BinariesDirectory\buildConfig\buildConfig\onnxruntime_providers_tensorrt.lib $BinariesDirectory\$artifactName\lib
+
+          copy $BinariesDirectory\buildConfig\buildConfig\onnxruntime.pdb $BinariesDirectory\$artifactName\lib
+          copy $BinariesDirectory\buildConfig\buildConfig\onnxruntime.lib $BinariesDirectory\$artifactName\lib
+          copy .\include\onnxruntime\core\session\onnxruntime_*.h  $BinariesDirectory\$artifactName\include
+          copy .\include\onnxruntime\core\framework\provider_options.h  $BinariesDirectory\$artifactName\include
+          copy .\include\onnxruntime\core\providers\cpu\cpu_provider_factory.h  $BinariesDirectory\$artifactName\include
+          copy .\include\onnxruntime\core\providers\tensorrt\tensorrt_provider_factory.h  $BinariesDirectory\$artifactName\include
+
+          REM copy the README, licence and TPN
+          copy .\README.md $BinariesDirectory\$artifactName\README.md          
+          copy .\docs\Privacy.md $BinariesDirectory\$artifactName\Privacy.md
+          copy .\LICENSE $BinariesDirectory\$artifactName\LICENSE
+          copy .\ThirdPartyNotices.txt $BinariesDirectory\$artifactName\ThirdPartyNotices.txt
+          copy .\VERSION_NUMBER $BinariesDirectory\$artifactName\VERSION_NUMBER
+          "" > $BinariesDirectory\$artifactName\GIT_COMMIT_ID
+          
+          tar -cvzf $artifactName.tgz $BinariesDirectory\$artifactName
 
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          files: onnxruntime-linux-x64-1.14.0.tgz
-
-#  windows_release:
-#    runs-on: windows-2019
-#    steps:
-#      - name: Check out a copy of the repository
-#        uses: actions/checkout@v2
-#      - uses: seanmiddleditch/gha-setup-vsdevenv@master
-#      - name: build
-#        run: .\build.bat --config Release --build_shared_lib --parallel --skip_tests
-#      - uses: actions/upload-artifact@v3
-#        with:
-#          path: build/Windows/Release/onnxruntime.dll
+          files: onnxruntime-win-x64-1.14.0.tgz
