@@ -58,7 +58,7 @@ jobs:
     env:
       BinariesDirectory: build\Windows
       buildConfig: Release
-      $artifactName: onnxruntime-win-x64-1.14.0
+      artifactName: onnxruntime-win-x64-1.14.0
     steps:
       - name: Check out a copy of the repository
         uses: actions/checkout@v2
@@ -75,21 +75,21 @@ jobs:
           mkdir $BinariesDirectory\$artifactName\include
 
           echo "Directories created"            
-          copy $BinariesDirectory\buildConfig\buildConfig\onnxruntime.dll $BinariesDirectory\$artifactName\lib
-          copy $BinariesDirectory\buildConfig\buildConfig\onnxruntime_providers_shared.dll $BinariesDirectory\$artifactName\lib
-          copy $BinariesDirectory\buildConfig\buildConfig\onnxruntime_providers_shared.lib $BinariesDirectory\$artifactName\lib
-          copy $BinariesDirectory\buildConfig\buildConfig\onnxruntime_providers_shared.pdb $BinariesDirectory\$artifactName\lib
-          copy $BinariesDirectory\buildConfig\buildConfig\onnxruntime_providers_cuda.dll $BinariesDirectory\$artifactName\lib
-          copy $BinariesDirectory\buildConfig\buildConfig\onnxruntime_providers_cuda.pdb $BinariesDirectory\$artifactName\lib
-          copy $BinariesDirectory\buildConfig\buildConfig\onnxruntime_providers_cuda.lib $BinariesDirectory\$artifactName\lib
+          copy $BinariesDirectory\$buildConfig\$buildConfig\onnxruntime.dll $BinariesDirectory\$artifactName\lib
+          copy $BinariesDirectory\$buildConfig\$buildConfig\onnxruntime_providers_shared.dll $BinariesDirectory\$artifactName\lib
+          copy $BinariesDirectory\$buildConfig\$buildConfig\onnxruntime_providers_shared.lib $BinariesDirectory\$artifactName\lib
+          copy $BinariesDirectory\$buildConfig\$buildConfig\onnxruntime_providers_shared.pdb $BinariesDirectory\$artifactName\lib
+          copy $BinariesDirectory\$buildConfig\$buildConfig\onnxruntime_providers_cuda.dll $BinariesDirectory\$artifactName\lib
+          copy $BinariesDirectory\$buildConfig\$buildConfig\onnxruntime_providers_cuda.pdb $BinariesDirectory\$artifactName\lib
+          copy $BinariesDirectory\$buildConfig\$buildConfig\onnxruntime_providers_cuda.lib $BinariesDirectory\$artifactName\lib
 
           # copy trt ep libraries only when trt ep is enabled
-          copy $BinariesDirectory\buildConfig\buildConfig\onnxruntime_providers_tensorrt.dll $BinariesDirectory\$artifactName\lib
-          copy $BinariesDirectory\buildConfig\buildConfig\onnxruntime_providers_tensorrt.pdb $BinariesDirectory\$artifactName\lib
-          copy $BinariesDirectory\buildConfig\buildConfig\onnxruntime_providers_tensorrt.lib $BinariesDirectory\$artifactName\lib
+          copy $BinariesDirectory\$buildConfig\$buildConfig\onnxruntime_providers_tensorrt.dll $BinariesDirectory\$artifactName\lib
+          copy $BinariesDirectory\$buildConfig\$buildConfig\onnxruntime_providers_tensorrt.pdb $BinariesDirectory\$artifactName\lib
+          copy $BinariesDirectory\$buildConfig\$buildConfig\onnxruntime_providers_tensorrt.lib $BinariesDirectory\$artifactName\lib
 
-          copy $BinariesDirectory\buildConfig\buildConfig\onnxruntime.pdb $BinariesDirectory\$artifactName\lib
-          copy $BinariesDirectory\buildConfig\buildConfig\onnxruntime.lib $BinariesDirectory\$artifactName\lib
+          copy $BinariesDirectory\$buildConfig\$buildConfig\onnxruntime.pdb $BinariesDirectory\$artifactName\lib
+          copy $BinariesDirectory\$buildConfig\$buildConfig\onnxruntime.lib $BinariesDirectory\$artifactName\lib
           copy .\include\onnxruntime\core\session\onnxruntime_*.h  $BinariesDirectory\$artifactName\include
           copy .\include\onnxruntime\core\framework\provider_options.h  $BinariesDirectory\$artifactName\include
           copy .\include\onnxruntime\core\providers\cpu\cpu_provider_factory.h  $BinariesDirectory\$artifactName\include
