@@ -15,25 +15,25 @@ on:
 
 jobs:
 # TODO: use universal mac
-#  mac_release:
-#    runs-on: macos-latest
-#    steps:
-#      - name: Check out a copy of the repository
-#        uses: actions/checkout@v2
-#
-#      - name: Build
-#        run: ./build.sh --config Release --build_shared_lib --parallel --skip_tests --cmake_extra_defines CMAKE_OSX_ARCHITECTURES=x86_64
-#
-#      - name: Copy, strip, and zip binary
-#        run: |
-#          ./tools/ci_build/github/linux/copy_strip_binary.sh -r build/MacOS -a onnxruntime-osx-x86_64-1.14.0 -l libonnxruntime.1.14.0.dylib -c Release -s ./
-#          cp build/MacOS/onnxruntime-osx-x86_64-1.14.0 ./
-#          tar -cvzf onnxruntime-osx-x86_64-1.14.0.tgz onnxruntime-osx-x86_64-1.14.0
-#
-#      - name: Release
-#        uses: softprops/action-gh-release@v1
-#        with:
-#          files: onnxruntime-osx-x86_64-1.14.0.tgz
+  mac_release:
+    runs-on: macos-latest
+    steps:
+      - name: Check out a copy of the repository
+        uses: actions/checkout@v2
+
+      - name: Build
+        run: ./build.sh --config Release --build_shared_lib --parallel --skip_tests --cmake_extra_defines CMAKE_OSX_ARCHITECTURES=x86_64
+
+      - name: Copy, strip, and zip binary
+        run: |
+          ./tools/ci_build/github/linux/copy_strip_binary.sh -r build/MacOS -a onnxruntime-osx-x86_64-1.14.0 -l libonnxruntime.1.14.0.dylib -c Release -s ./
+          cp -a build/MacOS/onnxruntime-osx-x86_64-1.14.0 ./onnxruntime-osx-x86_64-1.14.0
+          tar -cvzf onnxruntime-osx-x86_64-1.14.0.tgz onnxruntime-osx-x86_64-1.14.0
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: onnxruntime-osx-x86_64-1.14.0.tgz
 
   linux_release:
     runs-on: ubuntu-latest
@@ -47,7 +47,7 @@ jobs:
       - name: Copy, strip, and zip binary
         run: |
           ./tools/ci_build/github/linux/copy_strip_binary.sh -r build/Linux -a onnxruntime-linux-x64-1.14.0 -l libonnxruntime.so.1.14.0 -c Release -s ./
-          cp build/Linux/onnxruntime-linux-x64-1.14.0 ./
+          cp -a build/Linux/onnxruntime-linux-x64-1.14.0 ./onnxruntime-linux-x64-1.14.0
           tar -cvzf onnxruntime-linux-x64-1.14.0.tgz onnxruntime-linux-x64-1.14.0
 
       - name: Release
@@ -105,7 +105,7 @@ jobs:
 #          copy .\VERSION_NUMBER $BinariesDirectory\$artifactName\VERSION_NUMBER
 #          "" > $BinariesDirectory\$artifactName\GIT_COMMIT_ID
 #
-#          tar -cvzf $artifactName.tgz $BinariesDirectory\$artifactName
+#          tar -cvzf $artifactName.tgz $BinariesDirectory\$artifactName # TODO: cp here
 #
 #      - name: Release
 #        uses: softprops/action-gh-release@v1
