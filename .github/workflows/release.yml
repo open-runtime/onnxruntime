@@ -67,6 +67,8 @@ jobs:
 
       - name: Copy, strip, and zip binary
         run: |
+          xcopy brian\a\* .\brian2\ /E/H
+          tar -cvzf brian2.tgz brian2\
 #          mkdir ${{env.BinariesDirectory}}\${{env.artifactName}}
 #          mkdir $BinariesDirectory\$artifactName\lib
 #          mkdir $BinariesDirectory\$artifactName\include
@@ -101,10 +103,6 @@ jobs:
 #          "" > $BinariesDirectory\$artifactName\GIT_COMMIT_ID
 #
 #          tar -cvzf $artifactName.tgz $BinariesDirectory\$artifactName # TODO: cp here
-
-          xcopy brian\a\* .\brian2\ /E/H
-          tar -cvzf brian2.tgz brian2\
-
         working-directory: ${{runner.workspace}}\onnxruntime
 
       - name: Release
