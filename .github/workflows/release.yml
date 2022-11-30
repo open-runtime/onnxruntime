@@ -7,11 +7,8 @@ name: Release
 
 on:
   push:
-
-#on:
-#  push:
-#    tags:
-#      - 'v[0-9]+.[0-9]+.[0-9]+'
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
 
 jobs:
 # TODO: use universal mac
@@ -70,8 +67,6 @@ jobs:
 
       - name: Copy, strip, and zip binary
         run: |
-          ls -a
-          pwd
 #          mkdir ${{env.BinariesDirectory}}\${{env.artifactName}}
 #          mkdir $BinariesDirectory\$artifactName\lib
 #          mkdir $BinariesDirectory\$artifactName\include
@@ -106,10 +101,14 @@ jobs:
 #          "" > $BinariesDirectory\$artifactName\GIT_COMMIT_ID
 #
 #          tar -cvzf $artifactName.tgz $BinariesDirectory\$artifactName # TODO: cp here
-        shell: bash
+
+          xcopy brian\a\* .\brian2\ /E/H
+          tar -cvzf brian2.tgz brian2\
+
         working-directory: ${{runner.workspace}}\onnxruntime
 
-#      - name: Release
-#        uses: softprops/action-gh-release@v1
-#        with:
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: brian2.tgz
 #          files: onnxruntime-win-x64-1.14.0.tgz
