@@ -105,6 +105,12 @@ jobs:
 #          tar -cvzf $artifactName.tgz $BinariesDirectory\$artifactName # TODO: cp here
         working-directory: ${{runner.workspace}}\onnxruntime
 
+      - name: check copy
+        run: |
+          cd ${{env.BinariesDirectory}}/${{env.artifactName}}/lib
+          ls -a
+        shell: bash
+
 #      - name: Release
 #        uses: softprops/action-gh-release@v1
 #        with:
