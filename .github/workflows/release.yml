@@ -19,41 +19,42 @@ jobs:
     steps:
       - name: Check out a copy of the repository
         uses: actions/checkout@v2
-
-      - name: build
-        run: ./build.sh --config Release --build_shared_lib --parallel --skip_tests --cmake_extra_defines CMAKE_OSX_ARCHITECTURES=x86_64
-#      - name: Zip build dir
+      - name: Release
+        uses: softprops/action-gh-release@v1
+#        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            setup.py
+#      - name: build
+#        run: ./build.sh --config Release --build_shared_lib --parallel --skip_tests --cmake_extra_defines CMAKE_OSX_ARCHITECTURES=x86_64
+#
+#      - name: copy, strip, and zip binary
 #        run: |
-#          mkdir macos-build
-#          mkdir macos-build/lib
-#          mkdir macos-build/include
-      - uses: actions/upload-artifact@v3
-        with:
-          path: build/MacOS/Release/libonnxruntime.1.14.0.dylib
-      - uses: actions/upload-artifact@v3
-        with:
-          path: build/MacOS/Release/libonnxruntime.dylib
-  linux_release:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out a copy of the repository
-        uses: actions/checkout@v2
-      - name: build
-        run: ./build.sh --config Release --build_shared_lib --parallel --skip_tests
-      - uses: actions/upload-artifact@v3
-        with:
-          path: build/Linux/Release/libonnxruntime.so.1.14.0
-      - uses: actions/upload-artifact@v3
-        with:
-          path: build/Linux/Release/libonnxruntime.so
-  windows_release:
-    runs-on: windows-2019
-    steps:
-      - name: Check out a copy of the repository
-        uses: actions/checkout@v2
-      - uses: seanmiddleditch/gha-setup-vsdevenv@master
-      - name: build
-        run: .\build.bat --config Release --build_shared_lib --parallel --skip_tests
-      - uses: actions/upload-artifact@v3
-        with:
-          path: build/Windows/Release/onnxruntime.dll
+#          ./tools/ci_build/github/linux/copy_strip_binary.sh -r build/MacOS -a onnxruntime-osx-x86_64-1.14.0 -l libonnxruntime.1.14.0.dylib -c Release -s ./
+#
+
+#  linux_release:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Check out a copy of the repository
+#        uses: actions/checkout@v2
+#      - name: build
+#        run: ./build.sh --config Release --build_shared_lib --parallel --skip_tests
+#      - uses: actions/upload-artifact@v3
+#        with:
+#          path: build/Linux/Release/libonnxruntime.so.1.14.0
+#      - uses: actions/upload-artifact@v3
+#        with:
+#          path: build/Linux/Release/libonnxruntime.so
+
+#  windows_release:
+#    runs-on: windows-2019
+#    steps:
+#      - name: Check out a copy of the repository
+#        uses: actions/checkout@v2
+#      - uses: seanmiddleditch/gha-setup-vsdevenv@master
+#      - name: build
+#        run: .\build.bat --config Release --build_shared_lib --parallel --skip_tests
+#      - uses: actions/upload-artifact@v3
+#        with:
+#          path: build/Windows/Release/onnxruntime.dll
