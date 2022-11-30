@@ -5,10 +5,11 @@ name: cffconvert
 #    paths:
 #      - CITATION.cff
 
+# TODO: change back to "v" prepended. Removed to stop test from tunning
 on:
   push:
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - '[0-9]+.[0-9]+.[0-9]+'
 
 jobs:
   validate:
