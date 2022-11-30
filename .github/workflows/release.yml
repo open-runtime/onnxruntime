@@ -107,9 +107,10 @@ jobs:
 
       - name: check copy
         run: |
-          cd ${{env.BinariesDirectory}}/${{env.artifactName}}/lib
+          cd build/Windows/onnxruntime-win-x64-1.14.0/lib
           ls -a
         shell: bash
+        working-directory: ${{runner.workspace}}\onnxruntime
 
 #      - name: Release
 #        uses: softprops/action-gh-release@v1
