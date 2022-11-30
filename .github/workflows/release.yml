@@ -70,11 +70,7 @@ jobs:
 
       - name: Copy, strip, and zip binary
         run: |
-          ls
-          echo "$BinariesDirectory"
-          echo "$artifactName"
-          mkdir $BinariesDirectory/$artifactName
-#          mkdir $BinariesDirectory\$artifactName
+          mkdir $BinariesDirectory\$artifactName
 #          mkdir $BinariesDirectory\$artifactName\lib
 #          mkdir $BinariesDirectory\$artifactName\include
 #
@@ -109,7 +105,7 @@ jobs:
 #
 #          tar -cvzf $artifactName.tgz $BinariesDirectory\$artifactName # TODO: cp here
         shell: bash
-        working-directory: ${{runner.workspace}}
+        working-directory: ${{runner.workspace}}\onnxruntime
 
 #      - name: Release
 #        uses: softprops/action-gh-release@v1
