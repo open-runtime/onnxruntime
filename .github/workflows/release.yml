@@ -26,13 +26,13 @@ jobs:
         with:
           files: |
             blah.tgz
-#      - name: build
-#        run: ./build.sh --config Release --build_shared_lib --parallel --skip_tests --cmake_extra_defines CMAKE_OSX_ARCHITECTURES=x86_64
-#
-#      - name: copy, strip, and zip binary
-#        run: |
-#          ./tools/ci_build/github/linux/copy_strip_binary.sh -r build/MacOS -a onnxruntime-osx-x86_64-1.14.0 -l libonnxruntime.1.14.0.dylib -c Release -s ./
-#
+      - name: build
+        run: ./build.sh --config Release --build_shared_lib --parallel --skip_tests --cmake_extra_defines CMAKE_OSX_ARCHITECTURES=x86_64
+
+      - name: copy, strip, and zip binary
+        run: |
+          ./tools/ci_build/github/linux/copy_strip_binary.sh -r build/MacOS -a onnxruntime-osx-x86_64-1.14.0 -l libonnxruntime.1.14.0.dylib -c Release -s ./
+          tar -cvzf onnxruntime-osx-x86_64-1.14.0.tgz build/MacOS/onnxruntime-osx-x86_64-1.14.0
 
 #  linux_release:
 #    runs-on: ubuntu-latest
