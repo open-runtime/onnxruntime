@@ -19,8 +19,6 @@ jobs:
     steps:
       - name: Check out a copy of the repository
         uses: actions/checkout@v2
-      - name: zip
-        run: tar -cvzf blah.tgz blah/
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
