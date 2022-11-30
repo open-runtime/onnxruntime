@@ -17,7 +17,6 @@ jobs:
 # TODO: use universal mac
   mac_release:
     runs-on: macos-latest
-    env:
     steps:
       - name: Check out a copy of the repository
         uses: actions/checkout@v2
