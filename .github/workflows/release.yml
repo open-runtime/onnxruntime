@@ -70,7 +70,9 @@ jobs:
 
       - name: Copy, strip, and zip binary
         run: |
-          mkdir ${{env.BinariesDirectory}}\${{env.artifactName}}
+          ls -a
+          pwd
+#          mkdir ${{env.BinariesDirectory}}\${{env.artifactName}}
 #          mkdir $BinariesDirectory\$artifactName\lib
 #          mkdir $BinariesDirectory\$artifactName\include
 #
@@ -104,6 +106,7 @@ jobs:
 #          "" > $BinariesDirectory\$artifactName\GIT_COMMIT_ID
 #
 #          tar -cvzf $artifactName.tgz $BinariesDirectory\$artifactName # TODO: cp here
+        shell: bash
         working-directory: ${{runner.workspace}}\onnxruntime
 
 #      - name: Release
