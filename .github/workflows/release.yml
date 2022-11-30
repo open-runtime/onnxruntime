@@ -64,15 +64,15 @@ jobs:
 
 #      - name: build
 #        run: .\build.bat --config Release --build_shared_lib --parallel --skip_tests
+#      xcopy brian\a\* .\brian2\ /E/H
+#      tar -cvzf brian2.tgz -C brian2\ .
 
       - name: Copy, strip, and zip binary
         run: |
-          xcopy brian\a\* .\brian2\ /E/H
-          tar -cvzf brian2.tgz -C brian2\ .
-#          mkdir ${{env.BinariesDirectory}}\${{env.artifactName}}
-#          mkdir $BinariesDirectory\$artifactName\lib
-#          mkdir $BinariesDirectory\$artifactName\include
-#
+          mkdir ${{env.BinariesDirectory}}\${{env.artifactName}}
+          mkdir ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+          mkdir ${{env.BinariesDirectory}}\${{env.artifactName}}\include
+          copy brian\a\a.text ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
 #          echo "Directories created"
 #          copy $BinariesDirectory\$buildConfig\$buildConfig\onnxruntime.dll $BinariesDirectory\$artifactName\lib
 #          copy $BinariesDirectory\$buildConfig\$buildConfig\onnxruntime_providers_shared.dll $BinariesDirectory\$artifactName\lib
@@ -108,5 +108,4 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          files: brian2.tgz
-#          files: onnxruntime-win-x64-1.14.0.tgz
+          files: onnxruntime-win-x64-1.14.0.tgz
