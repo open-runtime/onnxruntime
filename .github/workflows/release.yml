@@ -5,73 +5,75 @@
 
 name: Release
 
-#on:
-#  push:
-
 on:
   push:
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+#on:
+#  push:
+#    tags:
+#      - 'v[0-9]+.[0-9]+.[0-9]+'
 
 jobs:
 # TODO: use universal mac
-  mac_release:
-    runs-on: macos-latest
-    steps:
-      - name: Check out a copy of the repository
-        uses: actions/checkout@v2
-
-      - name: Build
-        run: ./build.sh --config Release --build_shared_lib --parallel --skip_tests --cmake_extra_defines CMAKE_OSX_ARCHITECTURES=x86_64
-
-      - name: Copy, strip, and zip binary
-        run: |
-          ./tools/ci_build/github/linux/copy_strip_binary.sh -r build/MacOS -a onnxruntime-osx-x86_64-1.14.0 -l libonnxruntime.1.14.0.dylib -c Release -s ./
-          cp -a build/MacOS/onnxruntime-osx-x86_64-1.14.0 ./onnxruntime-osx-x86_64-1.14.0
-          tar -cvzf onnxruntime-osx-x86_64-1.14.0.tgz onnxruntime-osx-x86_64-1.14.0
-
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: onnxruntime-osx-x86_64-1.14.0.tgz
-
-  linux_release:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out a copy of the repository
-        uses: actions/checkout@v2
-
-      - name: build
-        run: ./build.sh --config Release --build_shared_lib --parallel --skip_tests
-
-      - name: Copy, strip, and zip binary
-        run: |
-          ./tools/ci_build/github/linux/copy_strip_binary.sh -r build/Linux -a onnxruntime-linux-x64-1.14.0 -l libonnxruntime.so.1.14.0 -c Release -s ./
-          cp -a build/Linux/onnxruntime-linux-x64-1.14.0 ./onnxruntime-linux-x64-1.14.0
-          tar -cvzf onnxruntime-linux-x64-1.14.0.tgz onnxruntime-linux-x64-1.14.0
-
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: onnxruntime-linux-x64-1.14.0.tgz
-
-#  windows_release:
-#    runs-on: windows-2019
-#    env:
-#      BinariesDirectory: build\Windows
-#      buildConfig: Release
-#      artifactName: onnxruntime-win-x64-1.14.0
+#  mac_release:
+#    runs-on: macos-latest
 #    steps:
 #      - name: Check out a copy of the repository
 #        uses: actions/checkout@v2
 #
-##      - uses: seanmiddleditch/gha-setup-vsdevenv@master
-#
-#      - name: build
-#        run: .\build.bat --config Release --build_shared_lib --parallel --skip_tests
+#      - name: Build
+#        run: ./build.sh --config Release --build_shared_lib --parallel --skip_tests --cmake_extra_defines CMAKE_OSX_ARCHITECTURES=x86_64
 #
 #      - name: Copy, strip, and zip binary
 #        run: |
+#          ./tools/ci_build/github/linux/copy_strip_binary.sh -r build/MacOS -a onnxruntime-osx-x86_64-1.14.0 -l libonnxruntime.1.14.0.dylib -c Release -s ./
+#          cp -a build/MacOS/onnxruntime-osx-x86_64-1.14.0 ./onnxruntime-osx-x86_64-1.14.0
+#          tar -cvzf onnxruntime-osx-x86_64-1.14.0.tgz onnxruntime-osx-x86_64-1.14.0
+#
+#      - name: Release
+#        uses: softprops/action-gh-release@v1
+#        with:
+#          files: onnxruntime-osx-x86_64-1.14.0.tgz
+#
+#  linux_release:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Check out a copy of the repository
+#        uses: actions/checkout@v2
+#
+#      - name: build
+#        run: ./build.sh --config Release --build_shared_lib --parallel --skip_tests
+#
+#      - name: Copy, strip, and zip binary
+#        run: |
+#          ./tools/ci_build/github/linux/copy_strip_binary.sh -r build/Linux -a onnxruntime-linux-x64-1.14.0 -l libonnxruntime.so.1.14.0 -c Release -s ./
+#          cp -a build/Linux/onnxruntime-linux-x64-1.14.0 ./onnxruntime-linux-x64-1.14.0
+#          tar -cvzf onnxruntime-linux-x64-1.14.0.tgz onnxruntime-linux-x64-1.14.0
+#
+#      - name: Release
+#        uses: softprops/action-gh-release@v1
+#        with:
+#          files: onnxruntime-linux-x64-1.14.0.tgz
+
+  windows_release:
+    runs-on: windows-2019
+    env:
+      BinariesDirectory: build\Windows
+      buildConfig: Release
+      artifactName: onnxruntime-win-x64-1.14.0
+    steps:
+      - name: Check out a copy of the repository
+        uses: actions/checkout@v2
+
+#      - name: build
+#        run: .\build.bat --config Release --build_shared_lib --parallel --skip_tests
+
+      - name: Copy, strip, and zip binary
+        run: |
+          ls
+          echo "$BinariesDirectory"
+          echo "$artifactName"
+          mkdir $BinariesDirectory/$artifactName
 #          mkdir $BinariesDirectory\$artifactName
 #          mkdir $BinariesDirectory\$artifactName\lib
 #          mkdir $BinariesDirectory\$artifactName\include
@@ -106,7 +108,9 @@ jobs:
 #          "" > $BinariesDirectory\$artifactName\GIT_COMMIT_ID
 #
 #          tar -cvzf $artifactName.tgz $BinariesDirectory\$artifactName # TODO: cp here
-#
+        shell: bash
+        working-directory: ${{runner.workspace}}
+
 #      - name: Release
 #        uses: softprops/action-gh-release@v1
 #        with:
