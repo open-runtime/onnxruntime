@@ -65,22 +65,16 @@ jobs:
       - name: build
         run: .\build.bat --config Release --build_shared_lib --parallel --skip_tests
 
-      - name: inspect
+      - name: inspect rel
         run: |
+          cd build/Windows/Release/Release
           ls -a
         shell: bash
         working-directory: ${{runner.workspace}}\onnxruntime
 
-      - name: inspect next
+      - name: inspect debug
         run: |
-          cd build/Windows/Release
-          ls -a
-        shell: bash
-        working-directory: ${{runner.workspace}}\onnxruntime
-
-      - name: inspect next next
-        run: |
-          cd build/Windows/Release
+          cd build/Windows/Release/RelWithDebInfo
           ls -a
         shell: bash
         working-directory: ${{runner.workspace}}\onnxruntime
