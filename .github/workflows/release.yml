@@ -64,7 +64,6 @@ jobs:
 
       - name: build
         run: .\build.bat --config ${{env.buildConfig}} --build_shared_lib --parallel --skip_tests
-        run: .\build.bat --config RelWithDebInfo --build_shared_lib --parallel --skip_tests
 
       - name: Copy, strip, and zip binary
         run: |
@@ -73,21 +72,21 @@ jobs:
           mkdir ${{env.BinariesDirectory}}\${{env.artifactName}}\include
 
           echo "Directories created"
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime.dll ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_shared.dll ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_shared.lib ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_shared.pdb ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_cuda.dll ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_cuda.pdb ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_cuda.lib ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\onnxruntime.dll ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\onnxruntime_providers_shared.dll ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\onnxruntime_providers_shared.lib ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\onnxruntime_providers_shared.pdb ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\onnxruntime_providers_cuda.dll ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\onnxruntime_providers_cuda.pdb ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\onnxruntime_providers_cuda.lib ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
 
           # copy trt ep libraries only when trt ep is enabled
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_tensorrt.dll ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_tensorrt.pdb ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_tensorrt.lib ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\onnxruntime_providers_tensorrt.dll ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\onnxruntime_providers_tensorrt.pdb ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\onnxruntime_providers_tensorrt.lib ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
 
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime.pdb ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime.lib ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\onnxruntime.pdb ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\onnxruntime.lib ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
           copy .\include\onnxruntime\core\session\onnxruntime_*.h  ${{env.BinariesDirectory}}\${{env.artifactName}}\include
           copy .\include\onnxruntime\core\framework\provider_options.h  ${{env.BinariesDirectory}}\${{env.artifactName}}\include
           copy .\include\onnxruntime\core\providers\cpu\cpu_provider_factory.h  ${{env.BinariesDirectory}}\${{env.artifactName}}\include
