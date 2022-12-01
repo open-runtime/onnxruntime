@@ -7,8 +7,8 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
+#    tags:
+#      - 'v[0-9]+.[0-9]+.[0-9]+'
 
 jobs:
 # TODO: use universal mac
@@ -65,48 +65,68 @@ jobs:
       - name: build
         run: .\build.bat --config Release --build_shared_lib --parallel --skip_tests
 
-      - name: Copy, strip, and zip binary
+      - name: inspect
         run: |
-          mkdir ${{env.BinariesDirectory}}\${{env.artifactName}}
-          mkdir ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          mkdir ${{env.BinariesDirectory}}\${{env.artifactName}}\include
-          
-          echo "Directories created"
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime.dll ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_shared.dll ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_shared.lib ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_shared.pdb ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_cuda.dll ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_cuda.pdb ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_cuda.lib ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-
-          # copy trt ep libraries only when trt ep is enabled
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_tensorrt.dll ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_tensorrt.pdb ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_tensorrt.lib ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime.pdb ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime.lib ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          copy .\include\onnxruntime\core\session\onnxruntime_*.h  ${{env.BinariesDirectory}}\${{env.artifactName}}\include
-          copy .\include\onnxruntime\core\framework\provider_options.h  ${{env.BinariesDirectory}}\${{env.artifactName}}\include
-          copy .\include\onnxruntime\core\providers\cpu\cpu_provider_factory.h  ${{env.BinariesDirectory}}\${{env.artifactName}}\include
-          copy .\include\onnxruntime\core\providers\tensorrt\tensorrt_provider_factory.h  ${{env.BinariesDirectory}}\${{env.artifactName}}\include
-
-          REM copy the README, licence and TPN
-          copy .\README.md ${{env.BinariesDirectory}}\${{env.artifactName}}\README.md
-          copy .\docs\Privacy.md ${{env.BinariesDirectory}}\${{env.artifactName}}\Privacy.md
-          copy .\LICENSE ${{env.BinariesDirectory}}\${{env.artifactName}}\LICENSE
-          copy .\ThirdPartyNotices.txt ${{env.BinariesDirectory}}\${{env.artifactName}}\ThirdPartyNotices.txt
-          copy .\VERSION_NUMBER ${{env.BinariesDirectory}}\${{env.artifactName}}\VERSION_NUMBER
-          "" > ${{env.BinariesDirectory}}\${{env.artifactName}}\GIT_COMMIT_ID
-
-          # copy build files to top-level dir to avoid tar-ing subdirs
-          mkdir ${{env.artifactName}}
-          xcopy ${{env.BinariesDirectory}}\${{env.artifactName}}\* .\${{env.artifactName}}\ /E/H
-          tar -cvzf ${{env.artifactName}}.tgz -C ${{env.artifactName}}\ .
+          ls -a
+        shell: bash
         working-directory: ${{runner.workspace}}\onnxruntime
 
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: onnxruntime-win-x64-1.14.0.tgz
+      - name: inspect next
+        run: |
+          cd build/Windows/Release
+          ls -a
+        shell: bash
+        working-directory: ${{runner.workspace}}\onnxruntime
+
+      - name: inspect next next
+        run: |
+          cd build/Windows/Release
+          ls -a
+        shell: bash
+        working-directory: ${{runner.workspace}}\onnxruntime
+
+#      - name: Copy, strip, and zip binary
+#        run: |
+#          mkdir ${{env.BinariesDirectory}}\${{env.artifactName}}
+#          mkdir ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+#          mkdir ${{env.BinariesDirectory}}\${{env.artifactName}}\include
+#
+#          echo "Directories created"
+#          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime.dll ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+#          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_shared.dll ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+#          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_shared.lib ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+#          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_shared.pdb ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+#          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_cuda.dll ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+#          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_cuda.pdb ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+#          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_cuda.lib ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+#
+#          # copy trt ep libraries only when trt ep is enabled
+#          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_tensorrt.dll ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+#          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_tensorrt.pdb ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+#          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_tensorrt.lib ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+#
+#          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime.pdb ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+#          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime.lib ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+#          copy .\include\onnxruntime\core\session\onnxruntime_*.h  ${{env.BinariesDirectory}}\${{env.artifactName}}\include
+#          copy .\include\onnxruntime\core\framework\provider_options.h  ${{env.BinariesDirectory}}\${{env.artifactName}}\include
+#          copy .\include\onnxruntime\core\providers\cpu\cpu_provider_factory.h  ${{env.BinariesDirectory}}\${{env.artifactName}}\include
+#          copy .\include\onnxruntime\core\providers\tensorrt\tensorrt_provider_factory.h  ${{env.BinariesDirectory}}\${{env.artifactName}}\include
+#
+#          REM copy the README, licence and TPN
+#          copy .\README.md ${{env.BinariesDirectory}}\${{env.artifactName}}\README.md
+#          copy .\docs\Privacy.md ${{env.BinariesDirectory}}\${{env.artifactName}}\Privacy.md
+#          copy .\LICENSE ${{env.BinariesDirectory}}\${{env.artifactName}}\LICENSE
+#          copy .\ThirdPartyNotices.txt ${{env.BinariesDirectory}}\${{env.artifactName}}\ThirdPartyNotices.txt
+#          copy .\VERSION_NUMBER ${{env.BinariesDirectory}}\${{env.artifactName}}\VERSION_NUMBER
+#          "" > ${{env.BinariesDirectory}}\${{env.artifactName}}\GIT_COMMIT_ID
+#
+#          # copy build files to top-level dir to avoid tar-ing subdirs
+#          mkdir ${{env.artifactName}}
+#          xcopy ${{env.BinariesDirectory}}\${{env.artifactName}}\* .\${{env.artifactName}}\ /E/H
+#          tar -cvzf ${{env.artifactName}}.tgz -C ${{env.artifactName}}\ .
+#        working-directory: ${{runner.workspace}}\onnxruntime
+#
+#      - name: Release
+#        uses: softprops/action-gh-release@v1
+#        with:
+#          files: onnxruntime-win-x64-1.14.0.tgz
