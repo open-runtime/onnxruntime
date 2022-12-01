@@ -64,6 +64,7 @@ jobs:
 
       - name: build
         run: .\build.bat --config ${{env.buildConfig}} --build_shared_lib --parallel --skip_tests
+        run: .\build.bat --config RelWithDebInfo --build_shared_lib --parallel --skip_tests
 
       - name: Copy, strip, and zip binary
         run: |
