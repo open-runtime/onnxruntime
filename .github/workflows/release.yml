@@ -19,7 +19,7 @@ jobs:
 #        uses: actions/checkout@v2
 #
 #      - name: Build
-#        run: ./build.sh --config Release --build_shared_lib --parallel --skip_tests --cmake_extra_defines CMAKE_OSX_ARCHITECTURES=x86_64
+#        run: ./build.sh --config Release --build_shared_lib --parallel --skip_tests --cmake_extra_defines CMAKE_OSX_ARCHITECTURES=arm64;x86_64
 #
 #      - name: Copy, strip, and zip binary
 #        run: |
@@ -31,7 +31,7 @@ jobs:
 #        uses: softprops/action-gh-release@v1
 #        with:
 #          files: onnxruntime-osx-x86_64-1.14.0.tgz
-#
+
 #  linux_release:
 #    runs-on: ubuntu-latest
 #    steps:
@@ -72,21 +72,13 @@ jobs:
           mkdir ${{env.BinariesDirectory}}\${{env.artifactName}}\include
 
           echo "Directories created"
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\onnxruntime.dll ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\onnxruntime_providers_shared.dll ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\onnxruntime_providers_shared.lib ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\onnxruntime_providers_shared.pdb ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\onnxruntime_providers_cuda.dll ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\onnxruntime_providers_cuda.pdb ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\onnxruntime_providers_cuda.lib ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime.dll ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_shared.dll ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_shared.lib ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_shared.pdb ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
 
-          # copy trt ep libraries only when trt ep is enabled
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\onnxruntime_providers_tensorrt.dll ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\onnxruntime_providers_tensorrt.pdb ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\onnxruntime_providers_tensorrt.lib ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\onnxruntime.pdb ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\onnxruntime.lib ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime.pdb ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime.lib ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
           copy .\include\onnxruntime\core\session\onnxruntime_*.h  ${{env.BinariesDirectory}}\${{env.artifactName}}\include
           copy .\include\onnxruntime\core\framework\provider_options.h  ${{env.BinariesDirectory}}\${{env.artifactName}}\include
           copy .\include\onnxruntime\core\providers\cpu\cpu_provider_factory.h  ${{env.BinariesDirectory}}\${{env.artifactName}}\include
