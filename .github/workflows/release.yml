@@ -7,20 +7,41 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
+#    tags:
+#      - 'v[0-9]+.[0-9]+.[0-9]+'
 
 jobs:
 # TODO: use universal mac
-#  mac_release:
-#    runs-on: macos-latest
-#    steps:
-#      - name: Check out a copy of the repository
-#        uses: actions/checkout@v2
-#
-#      - name: Build
-#        run: ./build.sh --config Release --build_shared_lib --parallel --skip_tests --cmake_extra_defines CMAKE_OSX_ARCHITECTURES=arm64;x86_64
-#
+  mac_release:
+    runs-on: macos-latest
+    steps:
+      - name: Check out a copy of the repository
+        uses: actions/checkout@v2
+
+      - name: Universal build setup
+        run: |
+          set -e
+          pushd .
+          cd $(Build.SourcesDirectory)/cmake/external/protobuf
+          cmake ./cmake -DCMAKE_INSTALL_PREFIX=$(Build.BinariesDirectory)/protobuf -DCMAKE_POSITION_INDEPENDENT_CODE=ON -Dprotobuf_BUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Relwithdebinfo '-DCMAKE_OSX_ARCHITECTURES=x86_64;arm64'
+          make -j$(getconf _NPROCESSORS_ONLN)
+          make install
+          popd
+          export PATH=$(Build.BinariesDirectory)/protobuf/bin:$PATH
+          export ONNX_ML=1
+          export CMAKE_ARGS="-DONNX_GEN_PB_TYPE_STUBS=OFF -DONNX_WERROR=OFF"
+          python3 -m pip install numpy wheel
+          python3 -m pip install $(Build.SourcesDirectory)/cmake/external/onnx
+          sudo xcode-select --switch /Applications/Xcode_12.4.app/Contents/Developer
+
+      - name: Build
+        run: ./build.sh --config Release --build_shared_lib --parallel --skip_tests --cmake_extra_defines CMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+
+      - name: inspect
+        run: |
+          cd build/MacOS/Release
+          ls -a
+
 #      - name: Copy, strip, and zip binary
 #        run: |
 #          ./tools/ci_build/github/linux/copy_strip_binary.sh -r build/MacOS -a onnxruntime-osx-x86_64-1.14.0 -l libonnxruntime.1.14.0.dylib -c Release -s ./
@@ -52,53 +73,53 @@ jobs:
 #        with:
 #          files: onnxruntime-linux-x64-1.14.0.tgz
 
-  windows_release:
-    runs-on: windows-2019
-    env:
-      BinariesDirectory: build\Windows
-      buildConfig: RelWithDebInfo
-      artifactName: onnxruntime-win-x64-1.14.0
-    steps:
-      - name: Check out a copy of the repository
-        uses: actions/checkout@v2
-
-      - name: build
-        run: .\build.bat --config ${{env.buildConfig}} --build_shared_lib --parallel --skip_tests
-
-      - name: Copy, strip, and zip binary
-        run: |
-          mkdir ${{env.BinariesDirectory}}\${{env.artifactName}}
-          mkdir ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          mkdir ${{env.BinariesDirectory}}\${{env.artifactName}}\include
-
-          echo "Directories created"
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime.dll ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_shared.dll ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_shared.lib ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_shared.pdb ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime.pdb ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime.lib ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
-          copy .\include\onnxruntime\core\session\onnxruntime_*.h  ${{env.BinariesDirectory}}\${{env.artifactName}}\include
-          copy .\include\onnxruntime\core\framework\provider_options.h  ${{env.BinariesDirectory}}\${{env.artifactName}}\include
-          copy .\include\onnxruntime\core\providers\cpu\cpu_provider_factory.h  ${{env.BinariesDirectory}}\${{env.artifactName}}\include
-          copy .\include\onnxruntime\core\providers\tensorrt\tensorrt_provider_factory.h  ${{env.BinariesDirectory}}\${{env.artifactName}}\include
-
-          REM copy the README, licence and TPN
-          copy .\README.md ${{env.BinariesDirectory}}\${{env.artifactName}}\README.md
-          copy .\docs\Privacy.md ${{env.BinariesDirectory}}\${{env.artifactName}}\Privacy.md
-          copy .\LICENSE ${{env.BinariesDirectory}}\${{env.artifactName}}\LICENSE
-          copy .\ThirdPartyNotices.txt ${{env.BinariesDirectory}}\${{env.artifactName}}\ThirdPartyNotices.txt
-          copy .\VERSION_NUMBER ${{env.BinariesDirectory}}\${{env.artifactName}}\VERSION_NUMBER
-          "" > ${{env.BinariesDirectory}}\${{env.artifactName}}\GIT_COMMIT_ID
-
-          # copy build files to top-level dir to avoid tar-ing subdirs
-          mkdir ${{env.artifactName}}
-          xcopy ${{env.BinariesDirectory}}\${{env.artifactName}}\* .\${{env.artifactName}}\ /E/H
-          tar -cvzf ${{env.artifactName}}.tgz -C ${{env.artifactName}}\ .
-        working-directory: ${{runner.workspace}}\onnxruntime
-
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: onnxruntime-win-x64-1.14.0.tgz
+#  windows_release:
+#    runs-on: windows-2019
+#    env:
+#      BinariesDirectory: build\Windows
+#      buildConfig: RelWithDebInfo
+#      artifactName: onnxruntime-win-x64-1.14.0
+#    steps:
+#      - name: Check out a copy of the repository
+#        uses: actions/checkout@v2
+#
+#      - name: build
+#        run: .\build.bat --config ${{env.buildConfig}} --build_shared_lib --parallel --skip_tests
+#
+#      - name: Copy, strip, and zip binary
+#        run: |
+#          mkdir ${{env.BinariesDirectory}}\${{env.artifactName}}
+#          mkdir ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+#          mkdir ${{env.BinariesDirectory}}\${{env.artifactName}}\include
+#
+#          echo "Directories created"
+#          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime.dll ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+#          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_shared.dll ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+#          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_shared.lib ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+#          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_shared.pdb ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+#
+#          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime.pdb ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+#          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime.lib ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+#          copy .\include\onnxruntime\core\session\onnxruntime_*.h  ${{env.BinariesDirectory}}\${{env.artifactName}}\include
+#          copy .\include\onnxruntime\core\framework\provider_options.h  ${{env.BinariesDirectory}}\${{env.artifactName}}\include
+#          copy .\include\onnxruntime\core\providers\cpu\cpu_provider_factory.h  ${{env.BinariesDirectory}}\${{env.artifactName}}\include
+#          copy .\include\onnxruntime\core\providers\tensorrt\tensorrt_provider_factory.h  ${{env.BinariesDirectory}}\${{env.artifactName}}\include
+#
+#          REM copy the README, licence and TPN
+#          copy .\README.md ${{env.BinariesDirectory}}\${{env.artifactName}}\README.md
+#          copy .\docs\Privacy.md ${{env.BinariesDirectory}}\${{env.artifactName}}\Privacy.md
+#          copy .\LICENSE ${{env.BinariesDirectory}}\${{env.artifactName}}\LICENSE
+#          copy .\ThirdPartyNotices.txt ${{env.BinariesDirectory}}\${{env.artifactName}}\ThirdPartyNotices.txt
+#          copy .\VERSION_NUMBER ${{env.BinariesDirectory}}\${{env.artifactName}}\VERSION_NUMBER
+#          "" > ${{env.BinariesDirectory}}\${{env.artifactName}}\GIT_COMMIT_ID
+#
+#          # copy build files to top-level dir to avoid tar-ing subdirs
+#          mkdir ${{env.artifactName}}
+#          xcopy ${{env.BinariesDirectory}}\${{env.artifactName}}\* .\${{env.artifactName}}\ /E/H
+#          tar -cvzf ${{env.artifactName}}.tgz -C ${{env.artifactName}}\ .
+#        working-directory: ${{runner.workspace}}\onnxruntime
+#
+#      - name: Release
+#        uses: softprops/action-gh-release@v1
+#        with:
+#          files: onnxruntime-win-x64-1.14.0.tgz
