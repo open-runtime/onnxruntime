@@ -141,6 +141,18 @@ Status BeamSearchT5<T>::Execute(const FeedsFetchesManager& encoder_feeds_fetches
                                              this->context_.GetTerminateFlag(),
                                              this->context_.Logger()));
 
+    // Allocate output tensor for encoder_hidden_states
+    const Tensor& encoder_hidden_states = encoder_fetches[1].Get<Tensor>();
+    Tensor* encoder_hidden_states_src = this->context_.Output(3, encoder_hidden_states.Shape());
+    // Check whether encoder_hidden_states exists in the output
+    if (encoder_hidden_states_src != nullptr) {
+        gsl::span<float> encoder_hidden_states_src_data = encoder_hidden_states_src->MutableDataAsSpan<float>();
+        gsl::span<const float> encoder_hidden_states_target = encoder_hidden_states.DataAsSpan<float>();
+        assert(encoder_hidden_states_target.size() == encoder_hidden_states_src_data.size());
+        ORT_RETURN_IF_ERROR(this->device_copy_func_(encoder_hidden_states_src_data, encoder_hidden_states_target, nullptr,
+                                                    DeviceCopyDirection::deviceToDevice));
+    }
+
 #ifdef DEBUG_GENERATION
   const IConsoleDumper* dumper = this->GetConsoleDumper();
   for (int i = 0; i < this->encoder_subgraph_.num_subgraph_inputs; i++) {
@@ -311,6 +323,8 @@ Status BeamSearchT5<T>::Execute(const FeedsFetchesManager& encoder_feeds_fetches
                                final_beam_scores,
                                output_sequences,
                                output_sequences_scores);
+
+  // TODO: output decoder hidden states after generation is complete
 
   // Output per token scores
   if (output_scores != nullptr) {

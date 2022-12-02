@@ -59,10 +59,10 @@ from gpt2_helper import PRETRAINED_GPT2_MODELS  # noqa: E402
 from models.gpt2.convert_to_onnx import main as convert_gpt2_to_onnx  # noqa: E402
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "models", "t5"))
-from benchmark_helper import setup_logger
-from models.t5.convert_to_onnx import export_onnx_models as export_t5_onnx_models  # noqa: E402
-from models.t5.t5_helper import PRETRAINED_MT5_MODELS, PRETRAINED_T5_MODELS  # noqa: E402
-from onnx_model import OnnxModel
+from onnxruntime.transformers.benchmark_helper import setup_logger
+from onnxruntime.transformers.models.t5.convert_to_onnx import export_onnx_models as export_t5_onnx_models  # noqa: E402
+from onnxruntime.transformers.models.t5.t5_helper import PRETRAINED_T5_MODELS  # noqa: E402
+from onnxruntime.transformers.onnx_model import OnnxModel
 
 logger = logging.getLogger("")
 
@@ -94,7 +94,7 @@ def parse_arguments(argv: Optional[List[str]] = None) -> argparse.Namespace:
         required=True,
         type=str,
         help="Pytorch model checkpoint path, or pretrained model name in the list: "
-        + ", ".join(PRETRAINED_GPT2_MODELS + PRETRAINED_T5_MODELS + PRETRAINED_MT5_MODELS),
+        + ", ".join(PRETRAINED_GPT2_MODELS + PRETRAINED_T5_MODELS),
     )
 
     input_group.add_argument(
@@ -188,7 +188,7 @@ def parse_arguments(argv: Optional[List[str]] = None) -> argparse.Namespace:
         action="store_true",
         help="output sequences scores",
     )
-    model_group.set_defaults(output_sequences_scores=False)
+    model_group.set_defaults(output_sequences_scores=True)
 
     model_group.add_argument(
         "--output_token_scores",
@@ -196,7 +196,15 @@ def parse_arguments(argv: Optional[List[str]] = None) -> argparse.Namespace:
         action="store_true",
         help="output token scores",
     )
-    model_group.set_defaults(output_token_scores=False)
+    model_group.set_defaults(output_token_scores=True)
+
+    model_group.add_argument(
+        "--output_encoder_hidden_states",
+        required=False,
+        action="store_true",
+        help="output encoder hidden states",
+    )
+    model_group.set_defaults(output_encoder_hidden_states=True)
 
     model_group.add_argument("--early_stopping", required=False, action="store_true")
     model_group.set_defaults(early_stopping=False)
@@ -787,6 +795,11 @@ def convert_generation_model(args: argparse.Namespace, generation_type: Generati
     is_gpt2: bool = args.model_type == "gpt2"
     is_greedysearch: bool = generation_type == GenerationType.GREEDYSEARCH
 
+    # TODO: fix issue with outputting encoder hidden states without needing the sequence scores
+    if args.output_encoder_hidden_states:
+        if not args.output_sequences_scores:
+            raise NotImplementedError("Encoder hidden states can only be output if sequences scores are output also")
+
     if is_greedysearch:
         if not is_gpt2:
             raise NotImplementedError("Currently only gpt2 with greedy search is supported")
@@ -798,6 +811,8 @@ def convert_generation_model(args: argparse.Namespace, generation_type: Generati
     if is_gpt2:
         if args.decoder_onnx and os.path.exists(args.decoder_onnx):
             logger.info(f"skip convert_to_onnx since path existed: {args.decoder_onnx}")
+        if args.output_encoder_hidden_states:
+            raise NotImplementedError("output_encoder_hidden_states currently is not supported for gpt2")
         else:
             if not args.decoder_onnx:
                 onnx_filename = "gpt2_past_{}.onnx".format("fp16" if args.precision == Precision.FLOAT16 else "fp32")
@@ -885,6 +900,9 @@ def convert_generation_model(args: argparse.Namespace, generation_type: Generati
     if args.output_token_scores:
         assert args.output_sequences_scores, "--output_token_scores requires --output_sequences_scores"
         outputs.append("scores")
+
+    if args.output_encoder_hidden_states:
+        outputs.append("encoder_hidden_states")
 
     node = (
         onnx.helper.make_node(
@@ -1032,6 +1050,15 @@ def convert_generation_model(args: argparse.Namespace, generation_type: Generati
         ["max_length - sequence_length", "batch_size", "num_beams", vocab_size],
     )
 
+    encoder_hidden_size = config.d_model
+    encoder_hidden_states = (
+        onnx.helper.make_tensor_value_info(
+            "encoder_hidden_states",
+            TensorProto.FLOAT,
+            ["batch_size", "encode_sequence_length", encoder_hidden_size]
+        )
+    )
+
     graph_outputs = [sequences]
 
     if args.output_sequences_scores:
@@ -1039,6 +1066,9 @@ def convert_generation_model(args: argparse.Namespace, generation_type: Generati
 
     if args.output_token_scores:
         graph_outputs.append(scores)
+
+    if args.output_encoder_hidden_states:
+        graph_outputs.append(encoder_hidden_states)
 
     new_graph = onnx.helper.make_graph(
         [node],
@@ -1355,8 +1385,8 @@ def test_t5_model(args: argparse.Namespace, sentences: Optional[List[str]] = Non
         logger.debug("Skipping parity test as prefix vocab mask is not implemented by Hugging Face")
         return None
 
-    tokenizer = T5Tokenizer.from_pretrained(args.model_name_or_path, cache_dir=args.cache_dir)
-    tokenizer.padding_side = "left"
+    from transformers import RobertaTokenizer
+    tokenizer = RobertaTokenizer.from_pretrained('Salesforce/codet5-base-multi-sum')
 
     if args.model_type == "t5":
         model = T5ForConditionalGeneration.from_pretrained(
@@ -1369,27 +1399,34 @@ def test_t5_model(args: argparse.Namespace, sentences: Optional[List[str]] = Non
             cache_dir=args.cache_dir,
         )
 
+    text = """def svg_to_image(string, size=None):
+    if isinstance(string, unicode):
+        string = string.encode('utf-8')
+        renderer = QtSvg.QSvgRenderer(QtCore.QByteArray(string))
+    if not renderer.isValid():
+        raise ValueError('Invalid SVG data.')
+    if size is None:
+        size = renderer.defaultSize()
+        image = QtGui.QImage(size, QtGui.QImage.Format_ARGB32)
+        painter = QtGui.QPainter(image)
+        renderer.render(painter)
+    return image"""
+
     # Use different length sentences to test batching
     if sentences is None:
-        sentences = [
-            "translate English to French: The product is released",
-            "summarize: research continues to show that pets bring real health benefits to their owners."
-            + "Having a dog around can lead to lower levels of stress for both adults and kids.",
-            # "summarize: I enjoy walking in the park. It makes my mind feel calm and refreshed. "
-            # + "I enjoy looking at the trees, flowers, and wildlife around me, and listening to sound from natural.",
-        ]
+        sentences = [text]
 
-    inputs = tokenizer(sentences, return_tensors="pt", padding=True)
+    inputs = tokenizer(sentences, return_tensors="pt")
     input_ids = inputs["input_ids"]
     attention_mask = inputs["attention_mask"]
 
-    bad_words = "walk in park"
-    bad_words_ids = tokenizer.encode(bad_words)[:-1]  # exclude the last token (EOS)
-    bad_words_ids = [[word_id] for word_id in bad_words_ids]  # Convert to list of list
-    if args.vocab_mask:
-        logger.debug("bad_words_ids", bad_words_ids)
-    else:
-        bad_words_ids = []
+    # bad_words = "walk in park"
+    # bad_words_ids = tokenizer.encode(bad_words)[:-1]  # exclude the last token (EOS)
+    # bad_words_ids = [[word_id] for word_id in bad_words_ids]  # Convert to list of list
+    # if args.vocab_mask:
+    #     logger.debug("bad_words_ids", bad_words_ids)
+    # else:
+    #     bad_words_ids = []
 
     config = model.config
     eos_token_id = config.eos_token_id
@@ -1401,6 +1438,15 @@ def test_t5_model(args: argparse.Namespace, sentences: Optional[List[str]] = Non
     if not args.disable_parity:
         print("-" * 50)
         print("Test PyTorch model and beam search with huggingface transformers...")
+
+        # Output hidden states
+        activation = {}
+        def get_activation(name):
+            def hook(model, input, output):
+                activation[name] = output.detach()
+            return hook
+        model.encoder.dropout.register_forward_hook(get_activation("encoder.dropout"))
+
         beam_outputs = model.generate(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -1414,7 +1460,6 @@ def test_t5_model(args: argparse.Namespace, sentences: Optional[List[str]] = Non
             num_return_sequences=args.num_return_sequences,
             length_penalty=args.length_penalty,
             repetition_penalty=args.repetition_penalty,
-            bad_words_ids=bad_words_ids if bad_words_ids else None,
             return_dict_in_generate=True,
             output_scores=args.output_sequences_scores or args.output_token_scores,
         )
@@ -1430,16 +1475,15 @@ def test_t5_model(args: argparse.Namespace, sentences: Optional[List[str]] = Non
             decoded_sequence = tokenizer.decode(sequence, skip_special_tokens=True)
             torch_decoded_sequences.append(decoded_sequence)
             print("{}: {}".format(i, decoded_sequence))
+        if args.output_encoder_hidden_states:
+            print("encoder_hidden_states:")
+            print(activation['encoder.dropout'].size())
+            print(activation['encoder.dropout'])
 
     print("-" * 50)
     print("Testing beam search with onnxruntime...")
 
     ort_session = create_ort_session(args.output, args.use_gpu)
-
-    vocab_mask = np.ones((vocab_size), dtype=np.int32)
-    if args.vocab_mask:
-        for bad_word_id in bad_words_ids:
-            vocab_mask[bad_word_id] = 0
 
     inputs = {
         "input_ids": input_ids.cpu().numpy().astype(np.int32),
@@ -1450,9 +1494,6 @@ def test_t5_model(args: argparse.Namespace, sentences: Optional[List[str]] = Non
         "length_penalty": np.array([args.length_penalty], dtype=np.float32),
         "repetition_penalty": np.array([args.repetition_penalty], dtype=np.float32),
     }
-
-    if args.vocab_mask:
-        inputs["vocab_mask"] = vocab_mask
 
     if args.custom_attention_mask:
         attention_mask = np.ones(input_ids.shape, dtype=np.int32)
@@ -1495,6 +1536,8 @@ def test_t5_model(args: argparse.Namespace, sentences: Optional[List[str]] = Non
         print("sequences_scores", result[1])
     if args.output_token_scores:
         print("scores", result[2])
+    if args.output_encoder_hidden_states:
+        print("encoder_hidden_states", result[3])
 
     (batch_size, num_sequences, max_length) = sequences.shape
     ort_decoded_sequences = []
@@ -1529,7 +1572,6 @@ def test_t5_model(args: argparse.Namespace, sentences: Optional[List[str]] = Non
             attention_mask,
             eos_token_id,
             pad_token_id,
-            bad_words_ids,
         )
         print("Torch Latency", torch_latency_output)
 
