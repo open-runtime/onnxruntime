@@ -168,7 +168,7 @@ class T5DecoderInputs:
         # For example, mt5-small, d_model=512 and num_heads=6
         head_size: int = config.d_kv
 
-        brian_input = torch.ones(8)
+        brian_input = torch.ones(8, dtype=torch.int32)
 
         sequence_length: int = 1  # fixed for decoding
         decoder_input_ids = torch.randint(

@@ -61,7 +61,7 @@ class T5EncoderInputs:
         """
         dtype = torch.int32 if use_int32_inputs else torch.int64
 
-        brian_input = torch.ones(8)
+        brian_input = torch.ones(8, dtype=torch.int32)
 
         input_ids = torch.randint(
             low=0,

@@ -1,0 +1,117 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  mac_arm64_release:
+    runs-on: self-hosted
+    steps:
+      - name: Check out a copy of the repository
+        uses: actions/checkout@v2
+
+      - name: Build
+        run: ./build.sh --config Release --build_shared_lib --parallel --skip_tests --build_wheel --cmake_extra_defines CMAKE_OSX_ARCHITECTURES=arm64
+
+      - name: Copy, strip, and zip binary
+        run: |
+          ./tools/ci_build/github/linux/copy_strip_binary.sh -r build/MacOS -a onnxruntime-osx-x86_64-1.14.0 -l libonnxruntime.1.14.0.dylib -c Release -s ./
+          cp -a build/MacOS/onnxruntime-osx-x86_64-1.14.0 ./onnxruntime-osx-x86_64-1.14.0
+          tar -cvzf onnxruntime-osx-x86_64-1.14.0.tgz onnxruntime-osx-x86_64-1.14.0
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: onnxruntime-osx-x86_64-1.14.0.tgz
+
+    mac_x86_64_release:
+      runs-on: macos-latest
+      steps:
+        - name: Check out a copy of the repository
+          uses: actions/checkout@v2
+
+        - name: Build
+          run: ./build.sh --config Release --build_shared_lib --parallel --skip_tests --cmake_extra_defines CMAKE_OSX_ARCHITECTURES=x86_64
+
+        - name: Copy, strip, and zip binary
+          run: |
+            ./tools/ci_build/github/linux/copy_strip_binary.sh -r build/MacOS -a onnxruntime-osx-x86_64-1.14.0 -l libonnxruntime.1.14.0.dylib -c Release -s ./
+            cp -a build/MacOS/onnxruntime-osx-x86_64-1.14.0 ./onnxruntime-osx-x86_64-1.14.0
+            tar -cvzf onnxruntime-osx-x86_64-1.14.0.tgz onnxruntime-osx-x86_64-1.14.0
+
+        - name: Release
+          uses: softprops/action-gh-release@v1
+          with:
+            files: onnxruntime-osx-x86_64-1.14.0.tgz
+
+  #  linux_release:
+  #    runs-on: ubuntu-latest
+  #    steps:
+  #      - name: Check out a copy of the repository
+  #        uses: actions/checkout@v2
+  #
+  #      - name: build
+  #        run: ./build.sh --config Release --build_shared_lib --parallel --skip_tests
+  #
+  #      - name: Copy, strip, and zip binary
+  #        run: |
+  #          ./tools/ci_build/github/linux/copy_strip_binary.sh -r build/Linux -a onnxruntime-linux-x64-1.14.0 -l libonnxruntime.so.1.14.0 -c Release -s ./
+  #          cp -a build/Linux/onnxruntime-linux-x64-1.14.0 ./onnxruntime-linux-x64-1.14.0
+  #          tar -cvzf onnxruntime-linux-x64-1.14.0.tgz onnxruntime-linux-x64-1.14.0
+  #
+  #      - name: Release
+  #        uses: softprops/action-gh-release@v1
+  #        with:
+  #          files: onnxruntime-linux-x64-1.14.0.tgz
+
+#  windows_release:
+#    runs-on: windows-2019
+#    env:
+#      BinariesDirectory: build\Windows
+#      buildConfig: RelWithDebInfo
+#      artifactName: onnxruntime-win-x64-1.14.0
+#    steps:
+#      - name: Check out a copy of the repository
+#        uses: actions/checkout@v2
+#
+#      - name: build
+#        run: .\build.bat --config ${{env.buildConfig}} --build_shared_lib --parallel --skip_tests
+#
+#      - name: Copy, strip, and zip binary
+#        run: |
+#          mkdir ${{env.BinariesDirectory}}\${{env.artifactName}}
+#          mkdir ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+#          mkdir ${{env.BinariesDirectory}}\${{env.artifactName}}\include
+#          echo "Directories created"
+#          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime.dll ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+#          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_shared.dll ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+#          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_shared.lib ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+#          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime_providers_shared.pdb ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+#          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime.pdb ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+#          copy ${{env.BinariesDirectory}}\${{env.buildConfig}}\${{env.buildConfig}}\onnxruntime.lib ${{env.BinariesDirectory}}\${{env.artifactName}}\lib
+#          copy .\include\onnxruntime\core\session\onnxruntime_*.h  ${{env.BinariesDirectory}}\${{env.artifactName}}\include
+#          copy .\include\onnxruntime\core\framework\provider_options.h  ${{env.BinariesDirectory}}\${{env.artifactName}}\include
+#          copy .\include\onnxruntime\core\providers\cpu\cpu_provider_factory.h  ${{env.BinariesDirectory}}\${{env.artifactName}}\include
+#          copy .\include\onnxruntime\core\providers\tensorrt\tensorrt_provider_factory.h  ${{env.BinariesDirectory}}\${{env.artifactName}}\include
+#          copy .\README.md ${{env.BinariesDirectory}}\${{env.artifactName}}\README.md
+#          copy .\docs\Privacy.md ${{env.BinariesDirectory}}\${{env.artifactName}}\Privacy.md
+#          copy .\LICENSE ${{env.BinariesDirectory}}\${{env.artifactName}}\LICENSE
+#          copy .\ThirdPartyNotices.txt ${{env.BinariesDirectory}}\${{env.artifactName}}\ThirdPartyNotices.txt
+#          copy .\VERSION_NUMBER ${{env.BinariesDirectory}}\${{env.artifactName}}\VERSION_NUMBER
+#          "" > ${{env.BinariesDirectory}}\${{env.artifactName}}\GIT_COMMIT_ID
+#          mkdir ${{env.artifactName}}
+#          xcopy ${{env.BinariesDirectory}}\${{env.artifactName}}\* .\${{env.artifactName}}\ /E/H
+#          tar -cvzf ${{env.artifactName}}.tgz -C ${{env.artifactName}}\ .
+#        working-directory: ${{runner.workspace}}\onnxruntime
+#
+#      - name: Release
+#        uses: softprops/action-gh-release@v1
+#        with:
+#          files: onnxruntime-win-x64-1.14.0.tgz

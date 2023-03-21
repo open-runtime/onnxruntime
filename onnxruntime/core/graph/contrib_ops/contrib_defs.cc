@@ -1001,7 +1001,7 @@ ONNX_MS_OPERATOR_SET_SCHEMA(BeamSearch, 1,
                                 .Attr("model_type", "model type: 0 for GPT-2; 1 for encoder decoder like T5", AttributeProto::INT, static_cast<int64_t>(0))
                                 .Attr("encoder", "The subgraph for initialization of encoder and decoder. It will be called once before decoder subgraph.", AttributeProto::GRAPH, OPTIONAL_VALUE)
                                 .Attr("decoder", "Decoder subgraph to execute in a loop.", AttributeProto::GRAPH)
-                                .Input(0, "brian_input", "Test input. Shape is (8)")
+                                .Input(0, "brian_input", "Test input. Shape is (8)", "I")
                                 .Input(1, "input_ids", "The sequence used as a prompt for the generation. Shape is (batch_size, sequence_length)", "I")
                                 .Input(2, "max_length", "The maximum length of the sequence to be generated. Shape is (1)", "I")
                                 .Input(3, "min_length", "The minimum length below which the score of eos_token_id is set to -Inf. Shape is (1)", "I", OpSchema::Optional)
