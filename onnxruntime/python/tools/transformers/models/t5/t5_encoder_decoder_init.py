@@ -46,19 +46,21 @@ class T5EncoderDecoderInit(torch.nn.Module):
 
     def forward(
         self,
+        brian_input: torch.Tensor,
         encoder_input_ids: torch.Tensor,
         encoder_attention_mask: torch.Tensor,
         decoder_input_ids: torch.Tensor = None,
     ):
-        encoder_hidden_states: torch.FloatTensor = self.t5_encoder(encoder_input_ids, encoder_attention_mask)
+        encoder_hidden_states: torch.FloatTensor = self.t5_encoder(brian_input, encoder_input_ids, encoder_attention_mask)
         lm_logits, past_self, past_cross = self.t5_decoder_init(
-            decoder_input_ids, encoder_attention_mask, encoder_hidden_states
+            brian_input, decoder_input_ids, encoder_attention_mask, encoder_hidden_states
         )
         return lm_logits, encoder_hidden_states, past_self, past_cross
 
 
 class T5EncoderDecoderInitInputs:
-    def __init__(self, encoder_input_ids, encoder_attention_mask, decoder_input_ids=None):
+    def __init__(self, brian_input, encoder_input_ids, encoder_attention_mask, decoder_input_ids=None):
+        self.brian_input: torch.LongTensor = brian_input
         self.encoder_input_ids: torch.LongTensor = encoder_input_ids
         self.encoder_attention_mask: torch.LongTensor = encoder_attention_mask
         self.decoder_input_ids: torch.LongTensor = decoder_input_ids
@@ -72,6 +74,8 @@ class T5EncoderDecoderInitInputs:
         device: torch.device,
         use_int32_inputs: bool = False,
     ):  # -> T5EncoderDecoderInitInputs:
+        brian_input = torch.ones(8)
+
         encoder_inputs: T5EncoderInputs = T5EncoderInputs.create_dummy(
             batch_size,
             encode_sequence_length,
@@ -84,10 +88,10 @@ class T5EncoderDecoderInitInputs:
             dtype = torch.int32 if use_int32_inputs else torch.int64
             decoder_input_ids = torch.ones((batch_size, 1), dtype=dtype, device=device) * config.decoder_start_token_id
 
-        return T5EncoderDecoderInitInputs(encoder_inputs.input_ids, encoder_inputs.attention_mask, decoder_input_ids)
+        return T5EncoderDecoderInitInputs(brian_input, encoder_inputs.input_ids, encoder_inputs.attention_mask, decoder_input_ids)
 
     def to_list(self) -> List:
-        input_list = [self.encoder_input_ids, self.encoder_attention_mask]
+        input_list = [self.brian_input, self.encoder_input_ids, self.encoder_attention_mask]
         if self.decoder_input_ids is not None:
             input_list.append(self.decoder_input_ids)
         return input_list
@@ -141,7 +145,7 @@ class T5EncoderDecoderInitHelper:
         #    past_self_*: (batch_size, num_heads, past_decode_sequence_length + sequence_length, head_size)
         #    past_cross_*: (batch_size, num_heads, encode_sequence_length, head_size)
 
-        input_names = ["encoder_input_ids", "encoder_attention_mask"]
+        input_names = ["brian_input", "encoder_input_ids", "encoder_attention_mask"]
 
         # ONNX exporter might mark dimension like 'Transposepresent_value_self_1_dim_2' in shape inference.
         # We use a workaround here: first use dim_param "1" for sequence_length, and later change to dim_value.
@@ -232,6 +236,7 @@ class T5EncoderDecoderInitHelper:
         logger.debug("start onnxruntime_inference")
 
         ort_inputs = {
+            "brian_input": numpy.ascontiguousarray(inputs.brian_input.cpu().numpy()),
             "encoder_input_ids": numpy.ascontiguousarray(inputs.encoder_input_ids.cpu().numpy()),
             "encoder_attention_mask": numpy.ascontiguousarray(inputs.encoder_attention_mask.cpu().numpy()),
         }

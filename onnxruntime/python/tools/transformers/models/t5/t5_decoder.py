@@ -50,6 +50,7 @@ class T5DecoderInit(torch.nn.Module):
 
     def forward(
         self,
+        brian_input: torch.Tensor,
         decoder_input_ids: torch.Tensor,
         encoder_attention_mask: torch.Tensor,
         encoder_hidden_states: torch.FloatTensor,
@@ -66,6 +67,7 @@ class T5DecoderInit(torch.nn.Module):
             )
 
         decoder_outputs = self.decoder(
+            brian_input=brian_input,
             input_ids=decoder_input_ids,
             encoder_hidden_states=encoder_hidden_states,
             encoder_attention_mask=encoder_attention_mask,
@@ -92,11 +94,12 @@ class T5Decoder(torch.nn.Module):
         self.lm_head = lm_head
         self.config = config
 
-    def forward(self, decoder_input_ids, encoder_attention_mask, encoder_hidden_states, *past):
+    def forward(self, brian_input, decoder_input_ids, encoder_attention_mask, encoder_hidden_states, *past):
 
         past_key_values = PastKeyValuesHelper.group_by_layer(past, self.config.num_layers)
 
         decoder_outputs = self.decoder(
+            brian_input=brian_input,
             input_ids=decoder_input_ids,
             past_key_values=past_key_values,
             encoder_hidden_states=encoder_hidden_states,
@@ -120,11 +123,13 @@ class T5Decoder(torch.nn.Module):
 class T5DecoderInputs:
     def __init__(
         self,
+        brian_input,
         decoder_input_ids,
         encoder_attention_mask,
         encoder_hidden_states,
         past_key_values=None,
     ):
+        self.brian_input: torch.LongTensor = brian_input
         self.decoder_input_ids: torch.LongTensor = decoder_input_ids
         self.encoder_attention_mask: torch.LongTensor = encoder_attention_mask
         self.encoder_hidden_states: Union[torch.FloatTensor, torch.HalfTensor] = encoder_hidden_states
@@ -162,6 +167,8 @@ class T5DecoderInputs:
         # Do not use head_size = hidden_size / num_attention_heads here.
         # For example, mt5-small, d_model=512 and num_heads=6
         head_size: int = config.d_kv
+
+        brian_input = torch.ones(8)
 
         sequence_length: int = 1  # fixed for decoding
         decoder_input_ids = torch.randint(
@@ -212,10 +219,11 @@ class T5DecoderInputs:
         else:
             past = None
 
-        return T5DecoderInputs(decoder_input_ids, encoder_inputs.attention_mask, encoder_hidden_state, past)
+        return T5DecoderInputs(brian_input, decoder_input_ids, encoder_inputs.attention_mask, encoder_hidden_state, past)
 
     def to_list(self) -> List:
         input_list = [
+            self.brian_input,
             self.decoder_input_ids,
             self.encoder_attention_mask,
             self.encoder_hidden_states,
@@ -228,6 +236,7 @@ class T5DecoderInputs:
         encoder_hidden_state = self.encoder_hidden_states.to(dtype=torch.float32)
         past = [p.to(dtype=torch.float32) for p in self.past_key_values] if self.past_key_values else None
         return T5DecoderInputs(
+            self.brian_input.clone(),
             self.decoder_input_ids.clone(),
             self.encoder_attention_mask.clone(),
             encoder_hidden_state,
@@ -287,7 +296,7 @@ class T5DecoderHelper:
         #    past_self_*: (batch_size, num_heads, past_decode_sequence_length + sequence_length, head_size)
         #    past_cross_*: (batch_size, num_heads, encode_sequence_length, head_size)
 
-        input_names = ["input_ids"]
+        input_names = ["brian_input", "input_ids"]
         input_names.append("encoder_attention_mask")
         input_names.append("encoder_hidden_states")
         input_names.extend(input_past_names)
@@ -360,6 +369,7 @@ class T5DecoderHelper:
         logger.debug("start onnxruntime_inference")
 
         ort_inputs = {
+            "brian_input": numpy.ascontiguousarray(inputs.brian_input.cpu().numpy()),
             "input_ids": numpy.ascontiguousarray(inputs.decoder_input_ids.cpu().numpy()),
             "encoder_attention_mask": numpy.ascontiguousarray(inputs.encoder_attention_mask.cpu().numpy()),
             "encoder_hidden_states": numpy.ascontiguousarray(inputs.encoder_hidden_states.cpu().numpy()),

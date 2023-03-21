@@ -34,12 +34,13 @@ class T5Encoder(torch.nn.Module):
         self.encoder = encoder
         self.config = config
 
-    def forward(self, input_ids, attention_mask):
-        return self.encoder(input_ids, attention_mask)[0]
+    def forward(self, brian_input, input_ids, attention_mask):
+        return self.encoder(brian_input, input_ids, attention_mask)[0]
 
 
 class T5EncoderInputs:
-    def __init__(self, input_ids, attention_mask):
+    def __init__(self, brian_input, input_ids, attention_mask):
+        self.brian_input: torch.LongTensor = brian_input
         self.input_ids: torch.LongTensor = input_ids
         self.attention_mask: torch.LongTensor = attention_mask
 
@@ -60,6 +61,8 @@ class T5EncoderInputs:
         """
         dtype = torch.int32 if use_int32_inputs else torch.int64
 
+        brian_input = torch.ones(8)
+
         input_ids = torch.randint(
             low=0,
             high=vocab_size - 1,
@@ -73,10 +76,10 @@ class T5EncoderInputs:
             for i in range(batch_size):
                 padding_position = random.randint(0, sequence_length - 1)
                 attention_mask[i, :padding_position] = 0
-        return T5EncoderInputs(input_ids, attention_mask)
+        return T5EncoderInputs(brian_input, input_ids, attention_mask)
 
     def to_list(self) -> List:
-        input_list = [v for v in [self.input_ids, self.attention_mask] if v is not None]
+        input_list = [v for v in [self.brian_input, self.input_ids, self.attention_mask] if v is not None]
         return input_list
 
 
@@ -118,7 +121,7 @@ class T5EncoderHelper:
                 args=tuple(encoder_inputs.to_list()),
                 f=temp_onnx_model_path if use_external_data_format else onnx_model_path,
                 export_params=True,
-                input_names=["input_ids", "attention_mask"],
+                input_names=["brian_input", "input_ids", "attention_mask"],
                 output_names=["hidden_states"],
                 dynamic_axes={
                     "input_ids": {0: "batch_size", 1: "sequence_length"},
@@ -144,6 +147,7 @@ class T5EncoderHelper:
     def onnxruntime_inference(ort_session, inputs: T5EncoderInputs):
         """Run inference of ONNX model."""
         ort_inputs = {
+            "brian_input": numpy.ascontiguousarray(inputs.brian_input.cpu().numpy()),
             "input_ids": numpy.ascontiguousarray(inputs.input_ids.cpu().numpy()),
             "attention_mask": numpy.ascontiguousarray(inputs.attention_mask.cpu().numpy()),
         }
