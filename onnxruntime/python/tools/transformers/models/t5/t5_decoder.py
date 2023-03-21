@@ -82,7 +82,7 @@ class T5DecoderInit(torch.nn.Module):
 
         lm_logits = self.lm_head(sequence_output)
         past_self, past_cross = PastKeyValuesHelper.group_by_self_or_cross(present_key_values)
-        return lm_logits, past_self, past_cross
+        return lm_logits, past_self, past_cross, brian_input
 
 
 class T5Decoder(torch.nn.Module):
@@ -117,7 +117,7 @@ class T5Decoder(torch.nn.Module):
         present_self, _ = PastKeyValuesHelper.group_by_self_or_cross(present_key_values)
 
         # Do not return present_cross since they are identical to corresponding past_cross input
-        return lm_logits, present_self
+        return lm_logits, present_self, brian_input
 
 
 class T5DecoderInputs:
@@ -283,6 +283,7 @@ class T5DecoderHelper:
         input_past_names = past_names if isinstance(decoder, T5Decoder) else []
         output_present_names = present_self_names if isinstance(decoder, T5Decoder) else present_names
         output_names = ["logits"] + output_present_names
+        output_names.append("brian_output")
 
         # Shape of input tensors (sequence_length==1):
         #    input_ids: (batch_size, sequence_length)
