@@ -21,6 +21,7 @@ class T5EncoderSubgraph : public Subgraph {
 
   // Create inputs for first inference of subgraph.
   Status CreateInitialFeeds(
+      const Tensor& brian_input,
       const Tensor& encoder_input_ids,
       const OrtValue* attn_mask_value,
       const std::vector<const OrtValue*>& implicit_inputs,

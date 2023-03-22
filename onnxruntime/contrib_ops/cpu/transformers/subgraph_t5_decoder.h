@@ -23,6 +23,7 @@ class T5DecoderSubgraph : public Subgraph {
 
   // Create inputs for first inference of decoder subgraph.
   Status CreateInitialFeeds(
+      const Tensor& brian_input,
       gsl::span<const int32_t> beam_next_tokens,
       const std::vector<const OrtValue*>& implicit_inputs,
       const std::vector<OrtValue>& encoder_feeds,

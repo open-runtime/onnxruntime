@@ -525,7 +525,7 @@ def verify_t5_decoder_subgraph(graph: onnx.GraphProto, precision: Precision):
     #   ... (for each cross attention layer)
 
     # TODO: encoder_hidden_states is optional
-    expected_inputs = ["input_ids", "encoder_attention_mask", "encoder_hidden_states"]
+    expected_inputs = ["brian_input", "input_ids", "encoder_attention_mask", "encoder_hidden_states"]
     for i in range(layer_count):
         expected_inputs.append(f"past_key_self_{i}")
         expected_inputs.append(f"past_value_self_{i}")
@@ -540,7 +540,7 @@ def verify_t5_decoder_subgraph(graph: onnx.GraphProto, precision: Precision):
         if graph.input[i].name != expected_input:
             raise ValueError(f"Input {i} is expected to be {expected_input}. Got {graph.input[i].name}")
 
-        expected_type = TensorProto.INT32 if i < 2 else float_type
+        expected_type = TensorProto.INT32 if i < 3 else float_type
         input_type = graph.input[i].type.tensor_type.elem_type
         if input_type != expected_type:
             raise ValueError(f"Input {i} is expected to have onnx data type {expected_type}. Got {input_type}")
@@ -589,7 +589,7 @@ def verify_t5_encoder_decoder_init_subgraph(graph: onnx.GraphProto, precision: P
     #   encoder_input_ids:      int32 (B, encode_sequence_length)
     #   encoder_attention_mask: int32 (B, encode_sequence_length)
     #   decoder_input_ids:      int32 (B, 1)
-    expected_inputs = ["encoder_input_ids", "encoder_attention_mask", "decoder_input_ids"]
+    expected_inputs = ["brian_input", "encoder_input_ids", "encoder_attention_mask", "decoder_input_ids"]
     if len(graph.input) != len(expected_inputs):
         raise ValueError(f"Number of inputs expected to be {len(expected_inputs)}. Got {len(graph.input)}")
 

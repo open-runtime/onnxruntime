@@ -106,10 +106,14 @@ Status BeamSearchT5<T>::Execute(const FeedsFetchesManager& encoder_feeds_fetches
   std::vector<OrtValue> encoder_feeds;
   std::vector<OrtValue> encoder_fetches;
 
-  const OrtValue* encoder_input_ids_value = this->context_.GetInputOrtValue(0);
+  // Get brian_input_ids from input 0
+  const OrtValue* brian_input_value = this->context_.GetInputOrtValue(0);
+  const Tensor& brian_input = brian_input_value->Get<Tensor>();
+
+  const OrtValue* encoder_input_ids_value = this->context_.GetInputOrtValue(1);
   const Tensor& encoder_input_ids = encoder_input_ids_value->Get<Tensor>();
 
-  const OrtValue* encoder_attn_mask_value = this->context_.GetInputOrtValue(9);
+  const OrtValue* encoder_attn_mask_value = this->context_.GetInputOrtValue(10);
 
   BeamSearchCpuState cpu_state;
   cpu_state.Init(this->cpu_allocator_,
@@ -121,6 +125,7 @@ Status BeamSearchT5<T>::Execute(const FeedsFetchesManager& encoder_feeds_fetches
   IAllocatorUniquePtr<char> buffer;
   OrtValue decoder_input_ids;  // Tensor in CPU, and it will be used to initialize sequence in cpu_state
   ORT_RETURN_IF_ERROR(this->encoder_subgraph_.CreateInitialFeeds(
+      brian_input,
       encoder_input_ids,
       encoder_attn_mask_value,
       this->implicit_inputs_,
@@ -214,7 +219,8 @@ Status BeamSearchT5<T>::Execute(const FeedsFetchesManager& encoder_feeds_fetches
                                                 cpu_state,
                                                 iteration_counter));
     ++current_length;  // Increase sequence length after a new token is generated.
-    ORT_RETURN_IF_ERROR(decoder_subgraph_.CreateInitialFeeds(beam_next_tokens.as_span<const int32_t>(),
+    ORT_RETURN_IF_ERROR(decoder_subgraph_.CreateInitialFeeds(brian_input,
+                                                             beam_next_tokens.as_span<const int32_t>(),
                                                              this->implicit_inputs_,
                                                              encoder_feeds,
                                                              encoder_fetches,
