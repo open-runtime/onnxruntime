@@ -240,6 +240,7 @@ const ONNX_NAMESPACE::AttributeProto* GetNodeAttribute(const Node& node, const s
 }
 
 NodeArg& AddInitializer(Graph& graph, const ONNX_NAMESPACE::TensorProto& new_initializer) {
+NodeArg& AddInitializer(Graph& graph, const ONNX_NAMESPACE::TensorProto& new_initializer) {
   // sanity check as AddInitializedTensor silently ignores attempts to add a duplicate initializer
   const ONNX_NAMESPACE::TensorProto* existing = nullptr;
   ORT_ENFORCE(!graph.GetInitializedTensor(new_initializer.name(), existing),

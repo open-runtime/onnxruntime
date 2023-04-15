@@ -73,12 +73,12 @@ Status T5DecoderSubgraph::Validate(const std::vector<const NodeArg*>& subgraph_i
   }
 
   // check subgraph outputs
-  ORT_RETURN_IF(subgraph_outputs[0]->Name() != "brian_output"
-                "decoder subgraph output 0 shall be named as brian_output, got: ", subgraph_outputs[0]->Name());
-  ORT_RETURN_IF(subgraph_outputs[1]->Name() != "logits",
-                "decoder subgraph output 1 shall be named as logits, got: ", subgraph_outputs[1]->Name());
+  ORT_RETURN_IF(subgraph_outputs[0]->Name() != "logits",
+                "decoder subgraph output 0 shall be named as logits, got: ", subgraph_outputs[0]->Name());
+  ORT_RETURN_IF(subgraph_outputs[1]->Name() != "brian_output",
+                "decoder subgraph output 1 shall be named as brian_output, got: ", subgraph_outputs[1]->Name());
 
-  const ONNX_NAMESPACE::TensorShapeProto* logits_shape = subgraph_outputs[1]->Shape();
+  const ONNX_NAMESPACE::TensorShapeProto* logits_shape = subgraph_outputs[0]->Shape();
   const ONNX_NAMESPACE::TensorShapeProto* past_shape = subgraph_outputs[first_present_output_index_]->Shape();
 
   // Save parameters related to the subgraph.
@@ -112,12 +112,12 @@ Status T5DecoderSubgraph::Validate(const std::vector<const NodeArg*>& subgraph_i
                   "decoder subgraph past inputs shall have same data type as that of encoder_hidden_states");
   }
 
-  for (int i = 0; i < num_subgraph_outputs; i++) {
+  for (int i = 0; i < num_subgraph_outputs - 1; i++) {
     ORT_RETURN_IF(subgraph_outputs[i]->TypeAsProto()->tensor_type().elem_type() != float_type,
                   "decoder subgraph output shall have same data type as that of encoder_hidden_states");
   }
 
-  is_output_float16_ = (subgraph_outputs[1]->TypeAsProto()->tensor_type().elem_type() == float16_type);
+  is_output_float16_ = (subgraph_outputs[0]->TypeAsProto()->tensor_type().elem_type() == float16_type);
 
   return Status::OK();
 }

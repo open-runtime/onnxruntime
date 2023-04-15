@@ -55,19 +55,19 @@ ORT_RETURN_IF(subgraph_inputs[0]->Name() != "brian_input",
   ORT_RETURN_IF(subgraph_inputs[3]->Name() != "decoder_input_ids",
                 "encoder subgraph input 3 shall be named as decoder_input_ids, got: ", subgraph_inputs[3]->Name());
 
-  ORT_RETURN_IF(subgraph_outputs[0]->Name() != "brian_output"
-                "encoder subgraph output 0 shall be named as brian_output, got: ", subgraph_outputs[0]->Name());
-  ORT_RETURN_IF(subgraph_outputs[1]->Name() != "logits",
-                "encoder subgraph output 1 shall be named as logits, got: ", subgraph_outputs[1]->Name());
-  ORT_RETURN_IF(subgraph_outputs[2]->Name() != "encoder_hidden_states",
-                "encoder subgraph output 2 shall be named encoder_hidden_states, got: ", subgraph_outputs[2]->Name());
-  ORT_RETURN_IF(subgraph_outputs[3]->Name() != "present_key_self_0",
-                "encoder subgraph output 3 shall be named as present_key_self_0, got: ", subgraph_outputs[3]->Name());
-  ORT_RETURN_IF(subgraph_outputs[4]->Name() != "present_value_self_0",
-                "encoder subgraph output 4 shall be named as present_value_self_0, got: ", subgraph_outputs[4]->Name());
+  ORT_RETURN_IF(subgraph_outputs[0]->Name() != "logits",
+                "encoder subgraph output 0 shall be named as logits, got: ", subgraph_outputs[0]->Name());
+  ORT_RETURN_IF(subgraph_outputs[1]->Name() != "encoder_hidden_states",
+                "encoder subgraph output 1 shall be named encoder_hidden_states, got: ", subgraph_outputs[1]->Name());
+  ORT_RETURN_IF(subgraph_outputs[2]->Name() != "present_key_self_0",
+                "encoder subgraph output 2 shall be named as present_key_self_0, got: ", subgraph_outputs[2]->Name());
+  ORT_RETURN_IF(subgraph_outputs[3]->Name() != "present_value_self_0",
+                "encoder subgraph output 3 shall be named as present_value_self_0, got: ", subgraph_outputs[3]->Name());
+  ORT_RETURN_IF(subgraph_outputs[4]->Name() != "brian_output",
+                "encoder subgraph output 4 shall be named as brian_output, got: ", subgraph_outputs[4]->Name());
 
-  const ONNX_NAMESPACE::TensorShapeProto* past_shape = subgraph_outputs[3]->Shape();
-  const ONNX_NAMESPACE::TensorShapeProto* logits_shape = subgraph_outputs[1]->Shape();
+  const ONNX_NAMESPACE::TensorShapeProto* past_shape = subgraph_outputs[2]->Shape();
+  const ONNX_NAMESPACE::TensorShapeProto* logits_shape = subgraph_outputs[0]->Shape();
 
   // Save parameters related to the subgraph.
   ORT_RETURN_IF_ERROR(GetParameters(past_shape, logits_shape, false));
@@ -86,9 +86,9 @@ ORT_RETURN_IF(subgraph_inputs[0]->TypeAsProto()->tensor_type().elem_type() != in
   ORT_RETURN_IF(subgraph_inputs[3]->TypeAsProto()->tensor_type().elem_type() != int32_type,
                 "encoder subgraph input 3 (decoder_input_ids) shall have int32 type");
 
-  auto output_type = subgraph_outputs[1]->TypeAsProto()->tensor_type().elem_type();
+  auto output_type = subgraph_outputs[0]->TypeAsProto()->tensor_type().elem_type();
   ORT_RETURN_IF(output_type != float32_type && output_type != float16_type,
-                "encoder subgraph output 1 (logits) shall be float or float16 data type");
+                "encoder subgraph output 0 (logits) shall be float or float16 data type");
 
   for (int i = 1; i < num_subgraph_outputs; i++) {
     ORT_RETURN_IF(subgraph_outputs[i]->TypeAsProto()->tensor_type().elem_type() != output_type,

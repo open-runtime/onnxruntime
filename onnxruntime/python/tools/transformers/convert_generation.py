@@ -555,6 +555,8 @@ def verify_t5_decoder_subgraph(graph: onnx.GraphProto, precision: Precision):
         expected_outputs.append(f"present_key_self_{i}")
         expected_outputs.append(f"present_value_self_{i}")
 
+    expected_outputs.append("brian_output")
+
     if len(graph.output) != len(expected_outputs):
         raise ValueError(f"Number of outputs expected to be {len(expected_outputs)}. Got {len(graph.output)}")
 
@@ -562,7 +564,12 @@ def verify_t5_decoder_subgraph(graph: onnx.GraphProto, precision: Precision):
         if graph.output[i].name != expected_output:
             raise ValueError(f"Output {i} is expected to be {expected_output}. Got {graph.output[i].name}")
         output_type = graph.output[i].type.tensor_type.elem_type
-        if output_type != float_type:
+
+        name = graph.output[i].name
+
+        if (name == "brian_output") and (output_type != TensorProto.INT32):
+            raise ValueError(f"Output {i} is expected to have onnx data type {TensorProto.INT32}. Got {output_type}")
+        elif (name != "brian_output") and (output_type != float_type):
             raise ValueError(f"Output {i} is expected to have onnx data type {float_type}. Got {output_type}")
 
 
@@ -619,6 +626,8 @@ def verify_t5_encoder_decoder_init_subgraph(graph: onnx.GraphProto, precision: P
         expected_outputs.append(f"present_key_cross_{i}")
         expected_outputs.append(f"present_value_cross_{i}")
 
+    expected_outputs.append("brian_output")
+
     if len(graph.output) != len(expected_outputs):
         raise ValueError(f"Number of outputs expected to be {len(expected_outputs)}. Got {len(graph.output)}")
 
@@ -626,7 +635,11 @@ def verify_t5_encoder_decoder_init_subgraph(graph: onnx.GraphProto, precision: P
         if graph.output[i].name != expected_output:
             raise ValueError(f"Output {i} is expected to be {expected_output}. Got {graph.output[i].name}")
 
-        expected_type = TensorProto.FLOAT16 if is_float16 else TensorProto.FLOAT
+        if expected_output == "brian_output":
+            expected_type = TensorProto.INT32
+        else:
+            expected_type = TensorProto.FLOAT16 if is_float16 else TensorProto.FLOAT
+
         output_type = graph.output[i].type.tensor_type.elem_type
         if output_type != expected_type:
             raise ValueError(f"Output {i} is expected to have onnx data type {expected_type}. Got {output_type}")
