@@ -423,8 +423,9 @@ endif()
 set(GSL_TARGET "Microsoft.GSL::GSL")
 set(GSL_INCLUDE_DIR "$<TARGET_PROPERTY:${GSL_TARGET},INTERFACE_INCLUDE_DIRECTORIES>")
 
-add_library(safeint_interface INTERFACE)
-target_include_directories(safeint_interface INTERFACE ${safeint_SOURCE_DIR})
+#add_library(safeint_interface INTERFACE)
+#target_include_directories(safeint_interface INTERFACE ${safeint_SOURCE_DIR})
+add_library(safeint_interface ALIAS safeint::safeint)
 
 # XNNPACK EP
 if (onnxruntime_USE_XNNPACK)
@@ -453,9 +454,9 @@ set(onnxruntime_EXTERNAL_LIBRARIES ${onnxruntime_EXTERNAL_LIBRARIES_XNNPACK} WIL
 # The other libs do not have the problem. All the sources are already there. We can compile them in any order.
 set(onnxruntime_EXTERNAL_DEPENDENCIES onnx_proto flatbuffers::flatbuffers)
 
-target_compile_definitions(onnx PUBLIC $<TARGET_PROPERTY:onnx_proto,INTERFACE_COMPILE_DEFINITIONS> PRIVATE "__ONNX_DISABLE_STATIC_REGISTRATION")
+#target_compile_definitions(onnx PUBLIC $<TARGET_PROPERTY:onnx_proto,INTERFACE_COMPILE_DEFINITIONS> PRIVATE "__ONNX_DISABLE_STATIC_REGISTRATION")
 if (NOT onnxruntime_USE_FULL_PROTOBUF)
-  target_compile_definitions(onnx PUBLIC "__ONNX_NO_DOC_STRINGS")
+#  target_compile_definitions(onnx PUBLIC "__ONNX_NO_DOC_STRINGS")
 endif()
 
 if (onnxruntime_RUN_ONNX_TESTS)
