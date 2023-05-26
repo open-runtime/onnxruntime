@@ -300,6 +300,7 @@ FetchContent_Declare(
     safeint
     URL ${DEP_URL_safeint}
     URL_HASH SHA1=${DEP_SHA1_safeint}
+    FIND_PACKAGE_ARGS NAMES safeint
 )
 
 # The next line will generate an error message "fatal: not a git repository", but it is ok. It is from flatbuffers
