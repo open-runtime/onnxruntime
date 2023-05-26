@@ -173,8 +173,10 @@ FetchContent_Declare(
       date
       URL ${DEP_URL_date}
       URL_HASH SHA1=${DEP_SHA1_date}
+      FIND_PACKAGE_ARGS NAMES date
     )
 onnxruntime_fetchcontent_makeavailable(date)
+add_library(date_interface ALIAS date::date)
 
 
 
