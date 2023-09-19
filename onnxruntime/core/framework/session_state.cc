@@ -1029,7 +1029,7 @@ Status SessionState::CreateSubgraphSessionState() {
       auto subgraph_session_state =
           std::make_unique<SessionState>(*subgraph, execution_providers_,
                                          thread_pool_, inter_op_thread_pool_, data_transfer_mgr_,
-                                         logger_, profiler_, sess_options_);
+                                         logger_, profiler_, sess_options_, prepacked_weights_container_);
 
       // Pass fused function manager to subgraph
       subgraph_session_state->fused_funcs_mgr_.SetFusedFuncs(fused_funcs_mgr_);
@@ -1486,6 +1486,7 @@ Status SessionState::FinalizeSessionStateImpl(const std::basic_string<PATH_CHAR_
   ORT_RETURN_IF_ERROR(CreateKernels(kernel_registry_manager));
 
   if (!disable_prepacking) {
+      std::cout << "Prepacking is enabled" << std::endl;
     ORT_RETURN_IF_ERROR(PrepackConstantInitializedTensors(constant_initializers_use_count,
                                                           session_options.initializers_to_share_map));
   }
