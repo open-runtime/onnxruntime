@@ -750,6 +750,7 @@ static ORT_STATUS_PTR InitializeSession(_In_ const OrtSessionOptions* options,
     }
   }
 
+  std::cout << "InitializeSession() prepacked_weights_container is null: " << (prepacked_weights_container == nullptr) << std::endl;
   if (prepacked_weights_container != nullptr) {
     ORT_API_RETURN_IF_STATUS_NOT_OK(sess->AddPrePackedWeightsContainer(
         reinterpret_cast<PrepackedWeightsContainer*>(prepacked_weights_container)));

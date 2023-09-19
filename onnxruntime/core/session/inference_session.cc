@@ -1253,8 +1253,10 @@ common::Status InferenceSession::Initialize() {
     }
 
     // Verify that there are no external initializers in the graph if external data is disabled.
+    std::cout << "external data is disabled" << std::endl;
     onnxruntime::Graph& graph = model_->MainGraph();
 #ifdef DISABLE_EXTERNAL_INITIALIZERS
+    std::cout << "external data is disabled" << std::endl;
     const InitializedTensorSet& initializers = graph.GetAllInitializedTensors();
     for (const auto& it : initializers) {
       if (utils::HasExternalData(*it.second)) {
