@@ -1253,7 +1253,6 @@ common::Status InferenceSession::Initialize() {
     }
 
     // Verify that there are no external initializers in the graph if external data is disabled.
-    std::cout << "external data is disabled" << std::endl;
     onnxruntime::Graph& graph = model_->MainGraph();
 #ifdef DISABLE_EXTERNAL_INITIALIZERS
     std::cout << "external data is disabled" << std::endl;
@@ -1472,6 +1471,7 @@ common::Status InferenceSession::Initialize() {
 #endif  // !defined(ORT_MINIMAL_BUILD) || defined(ORT_EXTENDED_MINIMAL_BUILD)
     }
 
+    std::cout << "finalizeing session state" << std::endl;
     ORT_RETURN_IF_ERROR_SESSIONID_(
         session_state_->FinalizeSessionState(model_location_, kernel_registry_manager_,
                                              // need to keep the initializers if saving the optimized model
