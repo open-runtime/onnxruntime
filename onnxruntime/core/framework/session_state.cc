@@ -370,8 +370,10 @@ static std::string GenerateKeyForPrepackedWeightsMap(const std::string& op_type,
 
 Status SessionState::PrepackConstantInitializedTensors(InlinedHashMap<std::string, size_t>& constant_initializers_use_count,
                                                        const std::unordered_map<std::string, const OrtValue*>& initializers_to_share_map) {
+    std::cout << "SessionState::PrepackConstantInitializedTensors" << std::endl;
   auto prepacked_constant_weights = [this, &constant_initializers_use_count, &initializers_to_share_map](
                                         bool should_cache_prepacked_weights_for_shared_initializers) -> Status {
+      std::cout << "should_cache_prepacked_weights_for_shared_initializers: " << should_cache_prepacked_weights_for_shared_initializers << std::endl;
     for (auto& node : GetGraphViewer().Nodes()) {
       auto kernel = GetMutableKernel(node.Index());
       int input_idx = 0;
@@ -393,9 +395,15 @@ Status SessionState::PrepackConstantInitializedTensors(InlinedHashMap<std::strin
                 auto iter = initializers_to_share_map.find(input_name);
                 bool is_shared_initializer = (iter != initializers_to_share_map.end());
 
+                // if share initializer, print the name of the initializer
+                if (is_shared_initializer) {
+                  std::cout << "shared initializer: " << input_name << std::endl;
+                }
+
                 // Caching pre-packed weights is limited to shared initializers associated with the CPU EP for now
                 if (is_shared_initializer && should_cache_prepacked_weights_for_shared_initializers &&
                     node.GetExecutionProviderType() == kCpuExecutionProvider) {  // caching of pre-packed weights' turned ON
+                    std::cout << "caching of pre-packed weight" << std::endl;
 
                   AllocatorPtr allocator_for_caching = prepacked_weights_container_->GetOrCreateAllocator(CPU);
                   ORT_ENFORCE(allocator_for_caching.get() != nullptr);
@@ -430,6 +438,7 @@ Status SessionState::PrepackConstantInitializedTensors(InlinedHashMap<std::strin
                     bool container_contains_packed_weight = prepacked_weights_container_->HasWeight(prepacked_weights_container_key);
 
                     if (container_contains_packed_weight) {
+                        std::cout << "container_contains_packed_weight" << std::endl;
                       LOGS(logger_, INFO) << "Using cached version of pre-packed weight for constant initializer: " << input_name
                                           << " used in the node: " << node.Name() << " which is of op type: " << node.OpType();
 
@@ -439,8 +448,9 @@ Status SessionState::PrepackConstantInitializedTensors(InlinedHashMap<std::strin
 
                       ++used_shared_pre_packed_weights_counter_;
                     } else {  // container doesn't contain the pre-packed weight - so write into it for sharing across kernel instances
-
+                        std::cout << "container doesn't contain the pre-packed weight" << std::endl;
                       if (!prepacked_weights_container_->WriteWeight(prepacked_weights_container_key, std::move(weights_to_be_filled_in))) {
+                          std::cout << "prepacked_weights_container_->WriteWeight failed" << std::endl;
                         return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, "Unable to write the provided PrePackedWeights instance into the container");
                       }
 
