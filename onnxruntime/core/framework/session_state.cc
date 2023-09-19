@@ -495,6 +495,8 @@ Status SessionState::PrepackConstantInitializedTensors(InlinedHashMap<std::strin
     return Status::OK();
   };
 
+  std::cout << "container is nullptr: " << (prepacked_weights_container_ == nullptr) << std::endl;
+
   bool should_cache_prepacked_weights_for_shared_initializers = (prepacked_weights_container_ != nullptr);
 
   if (should_cache_prepacked_weights_for_shared_initializers) {
