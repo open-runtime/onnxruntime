@@ -26,10 +26,10 @@ Initializer::Initializer(ONNX_NAMESPACE::TensorProto_DataType data_type,
 
 Initializer::Initializer(const ONNX_NAMESPACE::TensorProto& tensor_proto, const Path& model_path) {
   ORT_ENFORCE(utils::HasDataType(tensor_proto), "Initializer must have a datatype");
-  if (utils::HasExternalData(tensor_proto)) {
-    ORT_ENFORCE(!model_path.IsEmpty(),
-                "model_path must not be empty. Ensure that a path is provided when the model is created or loaded.");
-  }
+//  if (utils::HasExternalData(tensor_proto)) {
+//    ORT_ENFORCE(!model_path.IsEmpty(),
+//                "model_path must not be empty. Ensure that a path is provided when the model is created or loaded.");
+//  }
 
   auto proto_data_type = tensor_proto.data_type();
   if (utils::HasName(tensor_proto)) {
