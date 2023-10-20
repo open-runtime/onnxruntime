@@ -24,25 +24,29 @@ Initializer::Initializer(ONNX_NAMESPACE::TensorProto_DataType data_type,
   }
 }
 
-//Initializer::Initializer(const ONNX_NAMESPACE::TensorProto& tensor_proto, const Path& model_path) {
-//  ORT_ENFORCE(utils::HasDataType(tensor_proto), "Initializer must have a datatype");
-////  if (utils::HasExternalData(tensor_proto)) {
-////    ORT_ENFORCE(!model_path.IsEmpty(),
-////                "model_path must not be empty. Ensure that a path is provided when the model is created or loaded.");
-////  }
-//
-//  auto proto_data_type = tensor_proto.data_type();
-//  if (utils::HasName(tensor_proto)) {
-//    name_ = tensor_proto.name();
+Initializer::Initializer(const ONNX_NAMESPACE::TensorProto& tensor_proto, const Path& model_path) {
+  ORT_ENFORCE(utils::HasDataType(tensor_proto), "Initializer must have a datatype");
+//  if (utils::HasExternalData(tensor_proto)) {
+//    ORT_ENFORCE(!model_path.IsEmpty(),
+//                "model_path must not be empty. Ensure that a path is provided when the model is created or loaded.");
 //  }
-//
-//  auto proto_shape = utils::GetTensorShapeFromTensorProto(tensor_proto);
-//
-//  // This must be pre-allocated
-//  Tensor w(DataTypeImpl::TensorTypeFromONNXEnum(proto_data_type)->GetElementType(), proto_shape, std::make_shared<CPUAllocator>());
-////  ORT_THROW_IF_ERROR(utils::TensorProtoToTensor(Env::Default(), model_path.ToPathString().c_str(), tensor_proto, w));
-//  data_ = std::move(w);
-//}
+
+  auto proto_data_type = tensor_proto.data_type();
+  if (utils::HasName(tensor_proto)) {
+    name_ = tensor_proto.name();
+  }
+
+  auto proto_shape = utils::GetTensorShapeFromTensorProto(tensor_proto);
+
+  // This must be pre-allocated
+  Tensor w(DataTypeImpl::TensorTypeFromONNXEnum(proto_data_type)->GetElementType(), proto_shape, std::make_shared<CPUAllocator>());
+
+  if (!utils::HasExternalData(tensor_proto)) {
+      ORT_THROW_IF_ERROR(utils::TensorProtoToTensor(Env::Default(), model_path.ToPathString().c_str(), tensor_proto, w));
+  }
+
+  data_ = std::move(w);
+}
 
 #if !defined(ORT_EXTENDED_MINIMAL_BUILD)
 namespace {
