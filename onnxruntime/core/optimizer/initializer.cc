@@ -26,6 +26,7 @@ Initializer::Initializer(ONNX_NAMESPACE::TensorProto_DataType data_type,
 
 Initializer::Initializer(const ONNX_NAMESPACE::TensorProto& tensor_proto, const Path& model_path) {
   ORT_ENFORCE(utils::HasDataType(tensor_proto), "Initializer must have a datatype");
+  // Removed this check because our external initializers don't have external data at the model path
 //  if (utils::HasExternalData(tensor_proto)) {
 //    ORT_ENFORCE(!model_path.IsEmpty(),
 //                "model_path must not be empty. Ensure that a path is provided when the model is created or loaded.");
@@ -41,6 +42,7 @@ Initializer::Initializer(const ONNX_NAMESPACE::TensorProto& tensor_proto, const 
   // This must be pre-allocated
   Tensor w(DataTypeImpl::TensorTypeFromONNXEnum(proto_data_type)->GetElementType(), proto_shape, std::make_shared<CPUAllocator>());
 
+  // If the tensor has external data, we load it from the h5 file, not from a data file relative to the model path
   if (!utils::HasExternalData(tensor_proto)) {
       ORT_THROW_IF_ERROR(utils::TensorProtoToTensor(Env::Default(), model_path.ToPathString().c_str(), tensor_proto, w));
   }
