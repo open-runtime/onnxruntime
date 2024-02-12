@@ -46,7 +46,7 @@ stages:
         skipComponentGovernanceDetection: true
         ORT_CACHE_DIR: $(Agent.TempDirectory)/ort_ccache
         TODAY: $[format('{0:dd}{0:MM}{0:yyyy}', pipeline.startTime)]
-      pool: onnxruntime-Ubuntu2004-AMD-CPU
+      pool: onnxruntime-Ubuntu2204-AMD-CPU
       steps:
       - task: mspremier.PostBuildCleanup.PostBuildCleanup-task.PostBuildCleanup@3
         displayName: 'Clean Agent Directories'
@@ -93,7 +93,7 @@ stages:
                         --config Debug \
                         --skip_submodule_sync \
                         --build_shared_lib \
-                        --parallel \
+                        --parallel --use_binskim_compliant_compile_flags \
                         --build_csharp \
                         --enable_onnx_tests --enable_address_sanitizer \
                         --update --build;
@@ -102,7 +102,7 @@ stages:
                         --config Debug \
                         --skip_submodule_sync \
                         --build_shared_lib \
-                        --parallel \
+                        --parallel --use_binskim_compliant_compile_flags \
                         --build_csharp \
                         --enable_onnx_tests --enable_address_sanitizer \
                         --test;"
@@ -123,7 +123,7 @@ stages:
         skipComponentGovernanceDetection: true
         ORT_CACHE_DIR: $(Agent.TempDirectory)/ort_ccache
         TODAY: $[format('{0:dd}{0:MM}{0:yyyy}', pipeline.startTime)]
-      pool: onnxruntime-Ubuntu2004-AMD-CPU
+      pool: onnxruntime-Ubuntu2204-AMD-CPU
       steps:
       - task: mspremier.PostBuildCleanup.PostBuildCleanup-task.PostBuildCleanup@3
         displayName: 'Clean Agent Directories'
@@ -228,7 +228,7 @@ stages:
                         --config Release \
                         --skip_submodule_sync \
                         --build_shared_lib \
-                        --parallel \
+                        --parallel --use_binskim_compliant_compile_flags \
                         --build_wheel \
                         --build_csharp \
                         --enable_onnx_tests \

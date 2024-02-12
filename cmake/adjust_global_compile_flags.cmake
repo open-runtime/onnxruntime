@@ -92,8 +92,13 @@ if (onnxruntime_MINIMAL_BUILD)
   endif()
 endif()
 
-# enable stream for all the non-minimal build
-if (NOT onnxruntime_MINIMAL_BUILD)
+# Enable stream for all the non-minimal build, except for DML. There's currently a bug
+# in the allocation planner when reusing buffers and more than one streams are used that
+# make it possible (although rarely) to reach a reference count of 0 for a buffer that is
+# still being used. Since DML doesn't benefit from multiple streams, disabling it is the
+# safest option for now.
+# https://github.com/microsoft/onnxruntime/issues/19480
+if (NOT onnxruntime_MINIMAL_BUILD AND NOT onnxruntime_USE_DML)
   add_compile_definitions(ORT_ENABLE_STREAM)
 endif()
 
@@ -123,6 +128,11 @@ if (onnxruntime_DISABLE_RTTI)
     add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:/GR->" "$<$<COMPILE_LANGUAGE:CXX>:/we4541>")
   else()
     add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>")
+    if (onnxruntime_USE_WEBNN)
+      # Avoid unboundTypeError for WebNN EP since unbound type names are illegal with RTTI disabled
+      # in Embind API, relevant issue: https://github.com/emscripten-core/emscripten/issues/7001
+      add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-DEMSCRIPTEN_HAS_UNBOUND_TYPE_NAMES=0>")
+    endif()
   endif()
 else()
   #MSVC RTTI flag /GR is not added to CMAKE_CXX_FLAGS by default. But, anyway VC++2019 treats "/GR" default on.
