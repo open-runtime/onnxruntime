@@ -1,15 +1,12 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-// Modifications: Remove GetDeviceProp in LaunchFastGeluKernel.
-// Copyright (c) Advanced Micro Devices, Inc. All rights reserved.
-// Licensed under the MIT License.
+#include "contrib_ops/rocm/bert/fast_gelu.h"
 
 #include "core/providers/rocm/rocm_common.h"
 #include "core/providers/rocm/miopen_common.h"
-#include "contrib_ops/rocm/bert/fast_gelu.h"
-#include "contrib_ops/rocm/bert/fast_gelu_impl.h"
 #include "contrib_ops/cpu/bert/bias_gelu_helper.h"
+#include "contrib_ops/rocm/bert/elementwise.h"
 #include "contrib_ops/rocm/bert/transformer_common.h"
 
 namespace onnxruntime {
@@ -34,12 +31,6 @@ REGISTER_KERNEL_TYPED(BFloat16)
 using namespace ONNX_NAMESPACE;
 
 template <typename T>
-FastGelu<T>::FastGelu(const OpKernelInfo& op_kernel_info) : RocmKernel(op_kernel_info) {
-  const TransformerOptions* options = TransformerOptions::GetInstance();
-  tuning_ = options->IsTuningEnabled();
-}
-
-template <typename T>
 Status FastGelu<T>::ComputeInternal(OpKernelContext* context) const {
   ORT_RETURN_IF_ERROR(bias_gelu_helper::CheckInputs(context));
 
@@ -54,13 +45,13 @@ Status FastGelu<T>::ComputeInternal(OpKernelContext* context) const {
   int64_t bias_length = (nullptr == bias) ? 0 : bias->Shape().Size();
   typedef typename ToHipType<T>::MappedType HipT;
 
-  return LaunchFastGeluKernel<HipT>(Stream(),
-                                  static_cast<int>(input_length),
-                                  static_cast<int>(bias_length),
-                                  reinterpret_cast<const HipT*>(input->Data<T>()),
-                                  (nullptr != bias) ? reinterpret_cast<const HipT*>(bias->Data<T>()) : nullptr,
-                                  reinterpret_cast<HipT*>(output->MutableData<T>()),
-                                  tuning_);
+  const HipT* input_buffer = reinterpret_cast<const HipT*>(input->Data<T>());
+  const HipT* bias_buffer = (nullptr != bias) ? reinterpret_cast<const HipT*>(bias->Data<T>()) : nullptr;
+  return LaunchElementwiseKernel<functor::FastGeLU, HipT>(
+      GetTuningContext(), context->GetComputeStream(),
+      input_buffer, static_cast<int>(input_length),
+      bias_buffer, static_cast<int>(bias_length),
+      reinterpret_cast<HipT*>(output->MutableData<T>()));
 }
 
 }  // namespace rocm

@@ -1,9 +1,11 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+#pragma once
 namespace onnxruntime {
 
 extern ProviderHost* g_host;
+using ProviderType = const std::string&;
 
 struct CPUIDInfo final {
   static const CPUIDInfo& GetCPUIDInfo() { return g_host->CPUIDInfo__GetCPUIDInfo(); }
@@ -72,6 +74,7 @@ struct AttributeProto final {
   int64_t i() const { return g_host->AttributeProto__i(this); }
   float f() const { return g_host->AttributeProto__f(this); }
   void set_s(const ::std::string& value) { return g_host->AttributeProto__set_s(this, value); }
+  void set_i(int64_t value) { return g_host->AttributeProto__set_i(this, value); }
   const ::std::string& s() const { return g_host->AttributeProto__s(this); }
   void set_name(const ::std::string& value) { return g_host->AttributeProto__set_name(this, value); }
   void set_type(AttributeProto_AttributeType value) { return g_host->AttributeProto__set_type(this, value); }
@@ -116,6 +119,7 @@ struct GraphProto final {
   ValueInfoProtos* mutable_value_info() { return g_host->GraphProto__mutable_value_info(this); }
   TensorProtos* mutable_initializer() { return g_host->GraphProto__mutable_initializer(this); }
   NodeProto* add_node() { return g_host->GraphProto__add_node(this); }
+  NodeProto* mutable_node(int index) { return g_host->GraphProto__mutable_node(this, index); }
 
   GraphProto() = delete;
   GraphProto(const GraphProto&) = delete;
@@ -146,6 +150,7 @@ struct NodeProto final {
   void operator=(const NodeProto& v) { g_host->NodeProto__operator_assign(this, v); }
   int attribute_size() { return g_host->NodeProto__attribute_size(this); }
   const AttributeProto& attribute(int index) const { return g_host->NodeProto__attribute(this, index); }
+  AttributeProto* mutable_attribute(int index) { return g_host->NodeProto__mutable_attribute(this, index); }
 
   NodeProto() = delete;
   NodeProto(const NodeProto&) = delete;
@@ -330,6 +335,14 @@ struct DataTypeUtils final {
 
 }  // namespace Utils
 
+struct ConfigOptions final {
+  std::optional<std::string> GetConfigEntry(const std::string& config_key) const {
+    return g_host->ConfigOptions__GetConfigEntry(this, config_key);
+  }
+
+  PROVIDER_DISALLOW_ALL(ConfigOptions)
+};
+
 struct ComputeCapability final {
   static std::unique_ptr<ComputeCapability> Create(std::unique_ptr<IndexedSubGraph> t_sub_graph) { return g_host->ComputeCapability__construct(std::move(t_sub_graph)); }
   static void operator delete(void* p) { g_host->ComputeCapability__operator_delete(reinterpret_cast<ComputeCapability*>(p)); }
@@ -342,11 +355,9 @@ struct ComputeCapability final {
 };
 
 struct DataTransferManager final {
-  Status CopyTensor(const Tensor& src, Tensor& dst, int exec_queue_id) const { return g_host->DataTransferManager__CopyTensor(this, src, dst, exec_queue_id); }
   Status CopyTensor(const Tensor& src, Tensor& dst) const { return g_host->DataTransferManager__CopyTensor(this, src, dst); }
 #if !defined(DISABLE_SPARSE_TENSORS)
   Status CopySparseTensor(const SparseTensor& src, SparseTensor& dst) const { return g_host->DataTransferManager__CopySparseTensor(this, src, dst); }
-  Status CopySparseTensor(const SparseTensor& src, SparseTensor& dst, int exec_queue_id) const { return g_host->DataTransferManager__CopySparseTensor(this, src, dst, exec_queue_id); }
   Status CopySparseTensors(const std::vector<IDataTransfer::SparseSrcDstPair>& src_dst_pairs) const { return g_host->DataTransferManager__CopySparseTensors(this, src_dst_pairs); }
 #endif
   const IDataTransfer* GetDataTransfer(const OrtDevice& src_device, const OrtDevice& dst_device) const { return g_host->DataTransferManager__GetDataTransfer(this, src_device, dst_device); }
@@ -487,7 +498,7 @@ struct KernelDefBuilder final {
     return *this;
   }
 
-#ifdef ENABLE_TRAINING
+#ifdef ENABLE_STRIDED_TENSORS
   KernelDefBuilder& MayStridedInput(int input_index) {
     g_host->KernelDefBuilder__MayStridedInput(this, input_index);
     return *this;
@@ -545,15 +556,38 @@ class DataTypeImpl final {
 #if !defined(DISABLE_SPARSE_TENSORS)
   bool IsSparseTensorType() const { return g_host->DataTypeImpl__IsSparseTensorType(this); }
 #endif
+
   DeleteFunc GetDeleteFunc() const { return g_host->DataTypeImpl__GetDeleteFunc(this); }
 
   static const std::vector<MLDataType>& AllFixedSizeTensorTypes() { return g_host->DataTypeImpl__AllFixedSizeTensorTypes(); }
+  static const std::vector<MLDataType>& AllFixedSizeTensorTypesIRv4() { return g_host->DataTypeImpl__AllFixedSizeTensorTypesIRv4(); }
+  static const std::vector<MLDataType>& AllFixedSizeTensorTypesIRv9() { return g_host->DataTypeImpl__AllFixedSizeTensorTypesIRv9(); }
+
   static const std::vector<MLDataType>& AllTensorTypes() { return g_host->DataTypeImpl__AllTensorTypes(); }
+  static const std::vector<MLDataType>& AllTensorTypesIRv4() { return g_host->DataTypeImpl__AllTensorTypesIRv4(); }
+  static const std::vector<MLDataType>& AllTensorTypesIRv9() { return g_host->DataTypeImpl__AllTensorTypesIRv9(); }
+
   static const std::vector<MLDataType>& AllIEEEFloatTensorTypes() { return g_host->DataTypeImpl__AllIEEEFloatTensorTypes(); }
+
   static const std::vector<MLDataType>& AllTensorAndSequenceTensorTypes() { return g_host->DataTypeImpl__AllTensorAndSequenceTensorTypes(); }
+  static const std::vector<MLDataType>& AllTensorAndSequenceTensorTypesIRv4() { return g_host->DataTypeImpl__AllTensorAndSequenceTensorTypesIRv4(); }
+  static const std::vector<MLDataType>& AllTensorAndSequenceTensorTypesIRv9() { return g_host->DataTypeImpl__AllTensorAndSequenceTensorTypesIRv9(); }
+
+  static const std::vector<MLDataType>& AllOptionalAndTensorAndSequenceTensorTypes() { return g_host->DataTypeImpl__AllOptionalAndTensorAndSequenceTensorTypes(); }
+  static const std::vector<MLDataType>& AllOptionalAndTensorAndSequenceTensorTypesIRv4() { return g_host->DataTypeImpl__AllOptionalAndTensorAndSequenceTensorTypesIRv4(); }
+  static const std::vector<MLDataType>& AllOptionalAndTensorAndSequenceTensorTypesIRv9() { return g_host->DataTypeImpl__AllOptionalAndTensorAndSequenceTensorTypesIRv9(); }
+
   static const std::vector<MLDataType>& AllFixedSizeTensorAndSequenceTensorTypes() { return g_host->DataTypeImpl__AllFixedSizeTensorAndSequenceTensorTypes(); }
+  static const std::vector<MLDataType>& AllFixedSizeTensorAndSequenceTensorTypesIRv4() { return g_host->DataTypeImpl__AllFixedSizeTensorAndSequenceTensorTypesIRv4(); }
+  static const std::vector<MLDataType>& AllFixedSizeTensorAndSequenceTensorTypesIRv9() { return g_host->DataTypeImpl__AllFixedSizeTensorAndSequenceTensorTypesIRv9(); }
+
   static const std::vector<MLDataType>& AllSequenceTensorTypes() { return g_host->DataTypeImpl__AllSequenceTensorTypes(); }
+  static const std::vector<MLDataType>& AllSequenceTensorTypesIRv4() { return g_host->DataTypeImpl__AllSequenceTensorTypesIRv4(); }
+  static const std::vector<MLDataType>& AllSequenceTensorTypesIRv9() { return g_host->DataTypeImpl__AllSequenceTensorTypesIRv9(); }
+
   static const std::vector<MLDataType>& AllFixedSizeSequenceTensorTypes() { return g_host->DataTypeImpl__AllFixedSizeSequenceTensorTypes(); }
+  static const std::vector<MLDataType>& AllFixedSizeSequenceTensorTypesIRv4() { return g_host->DataTypeImpl__AllFixedSizeSequenceTensorTypesIRv4(); }
+  static const std::vector<MLDataType>& AllFixedSizeSequenceTensorTypesIRv9() { return g_host->DataTypeImpl__AllFixedSizeSequenceTensorTypesIRv9(); }
 
   const PrimitiveDataTypeBase* AsPrimitiveDataType() const { return g_host->DataTypeImpl__AsPrimitiveDataType(this); }
 
@@ -631,6 +665,8 @@ struct Node final {
   EdgeConstIterator OutputEdgesEnd() const noexcept { return g_host->Node__OutputEdgesEnd(this); }
 
   void ForEachDef(std::function<void(const NodeArg&, bool is_input)> func, bool include_missing_optional_defs = false) const { g_host->Node__ForEachDef(this, func, std::move(include_missing_optional_defs)); }
+  const std::unordered_map<std::string, gsl::not_null<Graph*>>& GetAttributeNameToMutableSubgraphMap() { return g_host->Node__GetAttributeNameToMutableSubgraphMap(this); }
+  std::unordered_map<std::string, gsl::not_null<const Graph*>> GetAttributeNameToSubgraphMap() const { return g_host->Node__GetAttributeNameToSubgraphMap(this); }
 
   PROVIDER_DISALLOW_ALL(Node)
 };
@@ -685,6 +721,8 @@ struct Graph final {
   std::unique_ptr<ONNX_NAMESPACE::GraphProto> ToGraphProto() const { return g_host->Graph__ToGraphProto(this); }
 
   NodeArg& GetOrCreateNodeArg(const std::string& name, const ONNX_NAMESPACE::TypeProto* p_arg_type) { return g_host->Graph__GetOrCreateNodeArg(this, name, p_arg_type); }
+  void AddOuterScopeNodeArg(const std::string& name) { g_host->Graph__AddOuterScopeNodeArg(this, name); }
+  void SetInputs(gsl::span<const NodeArg* const> inputs) { g_host->Graph__SetInputs(this, inputs); }
 
   Status Resolve() { return g_host->Graph__Resolve(this); }
   void AddInitializedTensor(const ONNX_NAMESPACE::TensorProto& tensor) { return g_host->Graph__AddInitializedTensor(this, tensor); }
@@ -699,9 +737,15 @@ struct Graph final {
 
   const Node* ParentNode() const { return g_host->Graph__ParentNode(this); }
   const Graph* ParentGraph() const { return g_host->Graph__ParentGraph(this); }
+  Graph* MutableParentGraph() { return g_host->Graph__MutableParentGraph(this); }
   const std::string& Name() const noexcept { return g_host->Graph__Name(this); }
+  const Path& ModelPath() const { return g_host->Graph__ModelPath(this); }
   const std::vector<const NodeArg*>& GetInputsIncludingInitializers() const noexcept { return g_host->Graph__GetInputsIncludingInitializers(this); }
   bool IsSubgraph() const { return g_host->Graph__IsSubgraph(this); }
+  int MaxNodeIndex() const noexcept { return g_host->Graph__MaxNodeIndex(this); }
+  const Node* GetNode(NodeIndex node_index) const noexcept { return g_host->Graph__GetNode(this, node_index); }
+  Node* GetNode(NodeIndex node_index) noexcept { return g_host->Graph__GetNode(this, node_index); }
+  const NodeArg* GetNodeArg(const std::string& name) const { return g_host->Graph__GetNodeArg(this, name); }
 
   PROVIDER_DISALLOW_ALL(Graph)
 };
@@ -746,6 +790,8 @@ struct GraphViewer final {
 
 struct Path final {
   PathString ToPathString() const noexcept { return g_host->Path__ToPathString(this); }
+  const std::vector<PathString>& GetComponents() const noexcept { return g_host->Path__GetComponents(this); }
+  bool IsEmpty() const noexcept { return g_host->Path__IsEmpty(this); }
 
   PROVIDER_DISALLOW_ALL(Path)
 };
@@ -778,6 +824,7 @@ struct OpKernelContext final {
 
   bool TryGetInferredOutputShape(int index, TensorShape& shape) const { return g_host->OpKernelContext__TryGetInferredOutputShape(this, index, shape); }
   bool TryGetInferredInputShape(int index, TensorShape& shape) const { return g_host->OpKernelContext__TryGetInferredInputShape(this, index, shape); }
+  Stream* GetComputeStream() const { return g_host->OpKernelContext__GetComputeStream(this); }
 
   PROVIDER_DISALLOW_ALL(OpKernelContext)
 };
@@ -817,9 +864,9 @@ inline const Tensor& OpKernelContext::RequiredInput(int index) const {
 struct OpKernelInfo final {
   static void operator delete(void* p) { g_host->OpKernelInfo__operator_delete(reinterpret_cast<OpKernelInfo*>(p)); }
 
-  AllocatorPtr GetAllocator(int device_id, OrtMemType mem_type) const { return g_host->OpKernelInfo__GetAllocator(this, device_id, mem_type); }
-
   const IExecutionProvider* GetExecutionProvider() const noexcept { return g_host->OpKernelInfo__GetExecutionProvider(this); }
+
+  AllocatorPtr GetAllocator(OrtMemType mem_type) const { return g_host->OpKernelInfo__GetAllocator(this, mem_type); }
 
   template <typename T>
   Status GetAttr(const std::string& name, T* value) const;
@@ -861,6 +908,8 @@ struct OpKernelInfo final {
   uint32_t GetOutputCount() const { return g_host->OpKernelInfo__GetOutputCount(this); }
 
   const Node& node() const noexcept { return g_host->OpKernelInfo__node(this); }
+
+  const ConfigOptions& GetConfigOptions() const { return g_host->OpKernelInfo__GetConfigOptions(this); }
 
   OpKernelInfo() = delete;
   OpKernelInfo(const OpKernelInfo&) = delete;
@@ -947,7 +996,7 @@ struct Tensor final {
   MLDataType DataType() const { return g_host->Tensor__DataType(this); }
   bool IsDataTypeString() const { return g_host->Tensor__IsDataTypeString(this); }
 
-#ifdef ENABLE_TRAINING
+#ifdef ENABLE_STRIDED_TENSORS
   gsl::span<const int64_t> Strides() const noexcept { return g_host->Tensor__Strides(this); }
   bool IsContiguous() const { return g_host->Tensor__IsContiguous(this); }
   void SetShapeAndStrides(const TensorShape& new_shape, gsl::span<const int64_t> new_strides) {
@@ -994,6 +1043,17 @@ inline bool Tensor::IsDataType<MLFloat16>() const { return g_host->Tensor__IsDat
 template <>
 inline bool Tensor::IsDataType<BFloat16>() const { return g_host->Tensor__IsDataType_BFloat16(this); }
 
+#if !defined(DISABLE_FLOAT8_TYPES)
+template <>
+inline bool Tensor::IsDataType<Float8E4M3FN>() const { return g_host->Tensor__IsDataType_Float8E4M3FN(this); }
+template <>
+inline bool Tensor::IsDataType<Float8E4M3FNUZ>() const { return g_host->Tensor__IsDataType_Float8E4M3FNUZ(this); }
+template <>
+inline bool Tensor::IsDataType<Float8E5M2>() const { return g_host->Tensor__IsDataType_Float8E5M2(this); }
+template <>
+inline bool Tensor::IsDataType<Float8E5M2FNUZ>() const { return g_host->Tensor__IsDataType_Float8E5M2FNUZ(this); }
+#endif
+
 template <>
 inline bool* Tensor::MutableData<bool>() { return g_host->Tensor__MutableData_bool(this); }
 template <>
@@ -1020,6 +1080,17 @@ template <>
 inline BFloat16* Tensor::MutableData<BFloat16>() { return g_host->Tensor__MutableData_BFloat16(this); }
 template <>
 inline MLFloat16* Tensor::MutableData<MLFloat16>() { return g_host->Tensor__MutableData_MLFloat16(this); }
+
+#if !defined(DISABLE_FLOAT8_TYPES)
+template <>
+inline Float8E4M3FN* Tensor::MutableData<Float8E4M3FN>() { return g_host->Tensor__MutableData_Float8E4M3FN(this); }
+template <>
+inline Float8E4M3FNUZ* Tensor::MutableData<Float8E4M3FNUZ>() { return g_host->Tensor__MutableData_Float8E4M3FNUZ(this); }
+template <>
+inline Float8E5M2* Tensor::MutableData<Float8E5M2>() { return g_host->Tensor__MutableData_Float8E5M2(this); }
+template <>
+inline Float8E5M2FNUZ* Tensor::MutableData<Float8E5M2FNUZ>() { return g_host->Tensor__MutableData_Float8E5M2FNUZ(this); }
+#endif
 
 template <>
 inline const bool* Tensor::Data<bool>() const { return g_host->Tensor__Data_bool(this); }
@@ -1048,20 +1119,35 @@ inline const BFloat16* Tensor::Data<BFloat16>() const { return g_host->Tensor__D
 template <>
 inline const MLFloat16* Tensor::Data<MLFloat16>() const { return g_host->Tensor__Data_MLFloat16(this); }
 
+#if !defined(DISABLE_FLOAT8_TYPES)
+template <>
+inline const Float8E4M3FN* Tensor::Data<Float8E4M3FN>() const { return g_host->Tensor__Data_Float8E4M3FN(this); }
+template <>
+inline const Float8E4M3FNUZ* Tensor::Data<Float8E4M3FNUZ>() const { return g_host->Tensor__Data_Float8E4M3FNUZ(this); }
+template <>
+inline const Float8E5M2* Tensor::Data<Float8E5M2>() const { return g_host->Tensor__Data_Float8E5M2(this); }
+template <>
+inline const Float8E5M2FNUZ* Tensor::Data<Float8E5M2FNUZ>() const { return g_host->Tensor__Data_Float8E5M2FNUZ(this); }
+#endif
+
 // SparseTensor
 #if !defined(DISABLE_SPARSE_TENSORS)
 struct SparseTensor final {
   const TensorShape& DenseShape() const noexcept { return g_host->SparseTensor__DenseShape(this); }
-  Status Copy(const DataTransferManager& dtm, int exec_q_id, SparseTensor& dst) const { return g_host->SparseTensor__Copy(this, dtm, exec_q_id, dst); }
+  Status Copy(const DataTransferManager& dtm, SparseTensor& dst) const { return g_host->SparseTensor__Copy(this, dtm, dst); }
 };
 #endif
 
 // TensorSeq
-struct TensorSeq final {
+class TensorSeq final {
+ public:
   MLDataType DataType() const noexcept { return g_host->TensorSeq__DataType(this); }
   void SetType(MLDataType elem_type) { g_host->TensorSeq__SetType(this, elem_type); }
   size_t Size() const noexcept { return g_host->TensorSeq__Size(this); }
   const Tensor& Get(size_t i) const { return g_host->TensorSeq__Get(this, i); }
+  const OrtValue& GetAt(size_t i) const { return g_host->TensorSeq__GetAt(this, i); }
+  void Add(const OrtValue& tensor) { g_host->TensorSeq__Add(this, tensor); }
+  void Add(OrtValue&& tensor) { g_host->TensorSeq__Add(this, std::move(tensor)); }
   void Add(Tensor&& tensor) { g_host->TensorSeq__Add(this, std::move(tensor)); }
   void Reserve(size_t capacity) { g_host->TensorSeq__Reserve(this, capacity); }
 };

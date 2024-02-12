@@ -16,7 +16,6 @@ limitations under the License.
 
 #include "core/platform/env.h"
 
-
 #include <assert.h>
 #include <dlfcn.h>
 #include <fcntl.h>
@@ -36,8 +35,12 @@ limitations under the License.
 #include <utility>  // for std::forward
 #include <vector>
 
-#ifdef CPUINFO_SUPPORTED
+// We can not use CPUINFO if it is not supported and we do not want to used
+// it on certain platforms because of the binary size increase.
+// We could use it to find out the number of physical cores for certain supported platforms
+#if defined(CPUINFO_SUPPORTED) && !defined(__APPLE__) && !defined(__ANDROID__) && !defined(__wasm__) && !defined(_AIX)
 #include <cpuinfo.h>
+#define ORT_USE_CPUINFO
 #endif
 
 #include "core/common/common.h"
@@ -171,8 +174,8 @@ class PosixThread : public EnvThread {
     custom_join_thread_fn = thread_options.custom_join_thread_fn;
 
     auto param_ptr = std::make_unique<Param>(name_prefix, index, start_address, param);
-    if (narrow<size_t>(index) < thread_options.affinity.size()) {
-      param_ptr->affinity = thread_options.affinity[index];
+    if (narrow<size_t>(index) < thread_options.affinities.size()) {
+      param_ptr->affinity = thread_options.affinities[index];
     }
 
     if (custom_create_thread_fn) {
@@ -188,8 +191,10 @@ class PosixThread : public EnvThread {
         auto [err_no, err_msg] = GetSystemError();
         ORT_THROW("pthread_attr_init failed, error code: ", err_no, " error msg: ", err_msg);
       }
-      if (thread_options.stack_size > 0) {
-        s = pthread_attr_setstacksize(&attr, thread_options.stack_size);
+
+      size_t stack_size = thread_options.stack_size;
+      if (stack_size > 0) {
+        s = pthread_attr_setstacksize(&attr, stack_size);
         if (s != 0) {
           auto [err_no, err_msg] = GetSystemError();
           ORT_THROW("pthread_attr_setstacksize failed, error code: ", err_no, " error msg: ", err_msg);
@@ -229,18 +234,29 @@ class PosixThread : public EnvThread {
       if (p->affinity.has_value() && !p->affinity->empty()) {
         cpu_set_t cpuset;
         CPU_ZERO(&cpuset);
-        for(auto id : *p->affinity) {
-          CPU_SET(id, &cpuset);
+        for (auto id : *p->affinity) {
+          if (id > -1 && id < CPU_SETSIZE) {
+            CPU_SET(id, &cpuset);
+          } else {
+            // Logical processor id starts from 0 internally, but in ort API, it starts from 1,
+            // that's why id need to increase by 1 when logging.
+            LOGS_DEFAULT(ERROR) << "cpu " << id + 1 << " does not exist, skipping it for affinity setting";
+          }
         }
-        // pthread_setaffinity_np() does not set errno, it returns it.
         auto ret = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
-        if (ret != 0) {
+        if (0 == ret) {
+          LOGS_DEFAULT(VERBOSE) << "pthread_setaffinity_np succeed for thread: " << syscall(SYS_gettid)
+                                << ", index: " << p->index
+                                << ", mask: " << *p->affinity;
+        } else {
           auto [err_no, err_msg] = GetSystemError(ret);
+#if !defined(USE_MIGRAPHX)
           LOGS_DEFAULT(ERROR) << "pthread_setaffinity_np failed for thread: " << syscall(SYS_gettid)
                               << ", index: " << p->index
                               << ", mask: " << *p->affinity
                               << ", error code: " << err_no << " error msg: " << err_msg
                               << ". Specify the number of threads explicitly so the affinity is not set.";
+#endif
         }
       }
 #endif
@@ -271,36 +287,30 @@ class PosixEnv : public Env {
     return new PosixThread(name_prefix, index, start_address, param, thread_options);
   }
 
-  // we are guessing the number of phys cores based on a popular HT case.
+  // we are guessing the number of phys cores based on a popular HT case (2 logical proc per core)
   static int DefaultNumCores() {
     return std::max(1, static_cast<int>(std::thread::hardware_concurrency() / 2));
   }
 
   // Return the number of physical cores
   int GetNumPhysicalCpuCores() const override {
-#ifdef CPUINFO_SUPPORTED
-    if(cpuinfo_available_) {
+#ifdef ORT_USE_CPUINFO
+    if (cpuinfo_available_) {
       return narrow<int>(cpuinfo_get_cores_count());
     }
-#endif
-    // We guess the number of cores
+#endif  // ORT_USE_CPUINFO
     return DefaultNumCores();
   }
 
-  std::vector<LogicalProcessors> GetThreadAffinityMasks() const override {
-
+  std::vector<LogicalProcessors> GetDefaultThreadAffinities() const override {
     std::vector<LogicalProcessors> ret;
-#ifdef CPUINFO_SUPPORTED
+#ifdef ORT_USE_CPUINFO
     if (cpuinfo_available_) {
-#if !defined(__APPLE__) && !defined(__ANDROID__) && !defined(__wasm__) && !defined(_AIX)
-      // We currently do not implement affinity on more than 64 cores.
       auto num_phys_cores = cpuinfo_get_cores_count();
       ret.reserve(num_phys_cores);
       for (uint32_t i = 0; i < num_phys_cores; ++i) {
         const auto* core = cpuinfo_get_core(i);
         LogicalProcessors th_aff;
-        // Processor count will never exceed 64 in a given group.
-        // TBD: Processor groups are currently not taken into account.
         th_aff.reserve(core->processor_count);
         auto log_proc_idx = core->processor_start;
         for (uint32_t count = 0; count < core->processor_count; count++, ++log_proc_idx) {
@@ -308,12 +318,11 @@ class PosixEnv : public Env {
           th_aff.push_back(log_proc->linux_id);
         }
         ret.push_back(std::move(th_aff));
-       }
-#endif
+      }
     }
-#endif // CPUINFO_SUPPORTED
+#endif
     // Just the size of the thread-pool
-    if(ret.empty()) {
+    if (ret.empty()) {
       ret.resize(GetNumPhysicalCpuCores());
     }
     return ret;
@@ -326,11 +335,12 @@ class PosixEnv : public Env {
       sleep_time.tv_nsec = 0;
 
       if (micros >= OneMillion) {
-        sleep_time.tv_sec = std::min<int64_t>(micros / OneMillion, std::numeric_limits<time_t>::max());
+        sleep_time.tv_sec = static_cast<time_t>(std::min<int64_t>(micros / OneMillion,
+                                                                  std::numeric_limits<time_t>::max()));
         micros -= static_cast<int64_t>(sleep_time.tv_sec) * OneMillion;
       }
       if (micros < OneMillion) {
-        sleep_time.tv_nsec = 1000 * micros;
+        sleep_time.tv_nsec = static_cast<decltype(timespec::tv_nsec)>(1000 * micros);
         micros = 0;
       }
       while (nanosleep(&sleep_time, &sleep_time) != 0 && errno == EINTR) {
@@ -432,9 +442,9 @@ class PosixEnv : public Env {
       return Status::OK();
     }
 
-    static const long page_size = sysconf(_SC_PAGESIZE);
+    static const size_t page_size = narrow<size_t>(sysconf(_SC_PAGESIZE));
     const FileOffsetType offset_to_page = offset % static_cast<FileOffsetType>(page_size);
-    const size_t mapped_length = length + offset_to_page;
+    const size_t mapped_length = length + static_cast<size_t>(offset_to_page);
     const FileOffsetType mapped_offset = offset - offset_to_page;
     void* const mapped_base =
         mmap(nullptr, mapped_length, PROT_READ | PROT_WRITE, MAP_PRIVATE, file_descriptor.Get(), mapped_offset);
@@ -522,7 +532,7 @@ class PosixEnv : public Env {
     return Status::OK();
   }
 
-  common::Status LoadDynamicLibrary(const std::string& library_filename, bool global_symbols, void** handle) const override {
+  common::Status LoadDynamicLibrary(const PathString& library_filename, bool global_symbols, void** handle) const override {
     dlerror();  // clear any old error_str
     *handle = dlopen(library_filename.c_str(), RTLD_NOW | (global_symbols ? RTLD_GLOBAL : RTLD_LOCAL));
     char* error_str = dlerror();
@@ -549,7 +559,12 @@ class PosixEnv : public Env {
 
   common::Status GetSymbolFromLibrary(void* handle, const std::string& symbol_name, void** symbol) const override {
     dlerror();  // clear any old error str
+
+    // search global space if handle is nullptr.
+    // value of RTLD_DEFAULT differs across posix platforms (-2 on macos, 0 on linux).
+    handle = handle ? handle : RTLD_DEFAULT;
     *symbol = dlsym(handle, symbol_name.c_str());
+
     char* error_str = dlerror();
     if (error_str) {
       return common::Status(common::ONNXRUNTIME, common::FAIL,
@@ -581,18 +596,16 @@ class PosixEnv : public Env {
   }
 
  private:
-  PosixEnv()  {
-#ifdef CPUINFO_SUPPORTED
+  Telemetry telemetry_provider_;
+#ifdef ORT_USE_CPUINFO
+  PosixEnv() {
     cpuinfo_available_ = cpuinfo_initialize();
-    if(!cpuinfo_available_) {
+    if (!cpuinfo_available_) {
       LOGS_DEFAULT(INFO) << "cpuinfo_initialize failed";
     }
-#endif
   }
-  Telemetry telemetry_provider_;
-#ifdef CPUINFO_SUPPORTED
   bool cpuinfo_available_{false};
-#endif
+#endif  // ORT_USE_CPUINFO
 };
 
 }  // namespace

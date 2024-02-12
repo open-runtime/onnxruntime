@@ -128,7 +128,7 @@ static bool RegisterCustomSchemas() {
       .Output(2, "y_zero_point", "Output zero point. It's a scalar, which means a per-tensor/layer quantization.", "T2")
       .TypeConstraint("T1", {"tensor(float)"}, "Constrain 'x' to float tensor.")
       .TypeConstraint("T2", {"tensor(uint8)"}, "Constrain 'y_zero_point' and 'y' to 8-bit unsigned integer tensor.")
-      .FunctionBody([]() {
+      .FunctionBody((const std::vector<NodeProto>&)([]() {
         auto nodes = ONNX_NAMESPACE::FunctionBodyHelper::BuildNodes({// nodes: {outputs, op, inputs, attributes}
                                                                      ONNX_NAMESPACE::FunctionBodyHelper::Const<float>("Q_Min", 0.f),
                                                                      ONNX_NAMESPACE::FunctionBodyHelper::Const<float>("Q_Max", 255.f),
@@ -148,8 +148,8 @@ static bool RegisterCustomSchemas() {
             node.set_domain(kMSNchwcDomain);
           }
         }
-        return nodes; }(),
-                    []() {
+        return nodes; }()),
+                    (const std::vector<OperatorSetIdProto>&)([]() {
                       std::vector<OperatorSetIdProto> operator_sets(2);
                       auto& onnx_opset = operator_sets[0];
                       onnx_opset.set_domain("");
@@ -160,7 +160,7 @@ static bool RegisterCustomSchemas() {
                       test_opset.set_version(1);
 
                       return operator_sets;
-                    }());
+                    }()));
 
   return true;
 }
@@ -1503,10 +1503,8 @@ TEST_F(GraphTest, ShapeInferenceErrorHandling) {
 
   graph.AddNode("node_1", "ShapeInferenceThrowsOp", "node 1", {&input_arg1}, {&output_arg1});
 
-  auto status = graph.Resolve();
-  EXPECT_FALSE(status.IsOK());
-  EXPECT_THAT(status.ErrorMessage(), testing::HasSubstr("Node (node_1) Op (ShapeInferenceThrowsOp) "
-                                                        "[ShapeInferenceError] try harder"));
+  EXPECT_STATUS_NOT_OK_AND_HAS_SUBSTR(graph.Resolve(),
+                                      "Node (node_1) Op (ShapeInferenceThrowsOp) [ShapeInferenceError] try harder");
 }
 
 TEST_F(GraphTest, AddTensorAttribute) {
@@ -2024,10 +2022,9 @@ TEST_F(GraphTest, LoadModelMissingInput) {
   SetTypeAndShape(output->mutable_type()->mutable_tensor_type(), 1, {2, 2});
 
   std::shared_ptr<Model> model;
-  Status st = Model::Load(std::move(m), model, nullptr, *logger_);
-  ASSERT_FALSE(st.IsOK());
-  ASSERT_THAT(st.ErrorMessage(), testing::HasSubstr("Invalid model. Node input 'y' is not a graph input, "
-                                                    "initializer, or output of a previous node."));
+  ASSERT_STATUS_NOT_OK_AND_HAS_SUBSTR(Model::Load(std::move(m), model, nullptr, *logger_),
+                                      "Invalid model. Node input 'y' is not a graph input, "
+                                      "initializer, or output of a previous node.");
 }
 
 // if an initializer is backing an optional graph input, it can't be removed even if unused in the graph.
