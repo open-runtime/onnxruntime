@@ -2927,6 +2927,11 @@ Status Graph::ReplaceInitializedTensorImpl(ONNX_NAMESPACE::TensorProto new_initi
   // look up the const pointer by name, then find and modify the mutable
   // pointed-to TensorProto in graph_proto_.
   const auto& initializer_name = new_initializer.name();
+  // print keys from name_to_initial_tensor_ for debugging
+  std::cout << "name_to_initial_tensor_ keys: " << std::endl;
+  for (const auto& entry : name_to_initial_tensor_) {
+    LOGS(logger_, VERBOSE) << "name_to_initial_tensor_ key: " << entry.first;
+  }
   const auto name_to_initializer_it = name_to_initial_tensor_.find(initializer_name);
   ORT_RETURN_IF_NOT(name_to_initializer_it != name_to_initial_tensor_.end(),
                     "Failed to find existing initializer with name ", initializer_name, ".");
