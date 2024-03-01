@@ -177,6 +177,7 @@ class Model {
   const Path& ModelPath() const noexcept { return model_path_; }
 
   void SetModelPath(const PathString& model_path) {
+    std::cout << "SetModelPath: " << model_path << std::endl;
     model_path_ = Path::Parse(model_path);
   }
 

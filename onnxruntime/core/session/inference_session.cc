@@ -3109,6 +3109,7 @@ void InferenceSession::SetExternalDataPath(const PathString& external_data_path)
   // Pretend there's a virtual model in the external data folder.
   // Because the external initializer path is relative to the filsystem directory where the ONNX protobuf model was stored
   model_location_ = external_data_path + ORT_TSTR("/model_from_memory.onnx");
+  std::cout << "SetExternalDataPath: " << ToMBString(model_location_) << std::endl;
   model_->SetModelPath(model_location_);
 }
 
