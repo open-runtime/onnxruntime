@@ -68,7 +68,10 @@ stages:
   jobs:
     - job: MacOS_C_API_Package_Publish
       pool:
-        vmImage: 'macOS-12'
+        ${{ if eq(parameters.DoESRP, true)}}:
+          vmImage: 'macOS-12'
+        ${{ else }}:
+          vmImage: 'macOS-latest'
       steps:
       - checkout: none
       - template: flex-downloadPipelineArtifact.yml

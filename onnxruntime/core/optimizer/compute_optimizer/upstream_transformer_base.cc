@@ -5,6 +5,7 @@
 
 #include <onnx/defs/attr_proto_util.h>
 #include "core/common/safeint.h"
+#include "core/common/string_utils.h"
 #include "core/graph/graph_utils.h"
 #include "core/optimizer/initializer.h"
 #include "core/optimizer/utils.h"
@@ -50,8 +51,9 @@ Status UpStreamGraphTransformerBase<T1, T2>::ApplyImpl(Graph& graph, bool& modif
   const auto& order = graph_viewer.GetNodesInTopologicalOrder();
   const auto& graph_outputs = graph.GetOutputs();
 
-  size_t reordered_node_count = 0;  // For summary
-  size_t passthrough_count = 0;
+  [[maybe_unused]] size_t reordered_node_count = 0;  // For summary
+  [[maybe_unused]] size_t passthrough_count = 0;
+
   for (const auto index : order) {
     auto* node_ptr = graph.GetNode(index);
     if (!node_ptr)
@@ -129,7 +131,7 @@ template <typename T1, typename T2>
 bool UpStreamGraphTransformerBase<T1, T2>::Upstream(Graph& graph, std::deque<T1>& queue,
                                                     Node& current_node, T1& info,
                                                     const logging::Logger& logger) const {
-  const std::string op_type = GetFullQualifiedOpName(current_node.OpType(), current_node.Domain());
+  const std::string op_type = utils::GetFullQualifiedOpName(current_node.OpType(), current_node.Domain());
   if (allowed_passthrough_ops_.count(op_type)) {
     auto& pass_through_config = allowed_passthrough_ops_.at(op_type);
     LOG_DEBUG_INFO(logger, "Enter reorder handle for node " + current_node.Name() + "(" + op_type + ")");
